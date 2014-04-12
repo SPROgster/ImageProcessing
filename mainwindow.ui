@@ -100,6 +100,17 @@
     <property name="title">
      <string>Редактировать</string>
     </property>
+    <widget class="QMenu" name="menuBinarization">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="title">
+      <string>Бинаризовать</string>
+     </property>
+     <addaction name="actionOtsu"/>
+    </widget>
+    <addaction name="menuBinarization"/>
+    <addaction name="actionCurve"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -112,6 +123,19 @@
   <action name="actionExit">
    <property name="text">
     <string>Выход</string>
+   </property>
+  </action>
+  <action name="actionOtsu">
+   <property name="text">
+    <string>Метод Отцу</string>
+   </property>
+  </action>
+  <action name="actionCurve">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Кривая яркости</string>
    </property>
   </action>
  </widget>
