@@ -63,11 +63,14 @@ void MainWindow::menuEditCurve()
 //
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    if (event->type() == QEvent::MouseButtonRelease)
-        curveChanged();
+    if (obj == curveWindow)
+    {
+        if (event->type() == QEvent::MouseButtonRelease)
+            curveChanged();
 
-    if (event->type() == QEvent::Close)
-        *image = (QImage)(ui->imageView->pixmap()->toImage());
+        if (event->type() == QEvent::Close)
+            *image = (QImage)(ui->imageView->pixmap()->toImage());
+    }
 
     return QMainWindow::eventFilter(obj, event);
 }
