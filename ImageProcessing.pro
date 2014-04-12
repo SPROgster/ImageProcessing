@@ -13,8 +13,13 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    coindialog.cpp \
+    morphology.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    coindialog.h \
+    morphology.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    coindialog.ui

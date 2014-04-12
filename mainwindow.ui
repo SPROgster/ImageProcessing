@@ -100,6 +100,7 @@
     <property name="title">
      <string>Редактировать</string>
     </property>
+    <addaction name="actionCoinMask"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -112,6 +113,11 @@
   <action name="actionExit">
    <property name="text">
     <string>Выход</string>
+   </property>
+  </action>
+  <action name="actionCoinMask">
+   <property name="text">
+    <string>Создать маску для монеток</string>
    </property>
   </action>
  </widget>

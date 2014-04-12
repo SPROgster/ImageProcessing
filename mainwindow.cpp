@@ -10,6 +10,9 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    coinDialog = new CoinDialog(this);
+    coinDialog->installEventFilter(this);
+
     // File
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(menuFileOpen()));
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(menuFileExit()));
@@ -34,6 +37,23 @@ void MainWindow::menuFileOpen()
 void MainWindow::menuFileExit()
 {
     close();
+}
+
+void MainWindow::menuEditCoinMask()
+{
+    ;
+}
+
+//
+//  Фильтр событий
+//
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == coinDialog)
+    {
+    }
+
+    return QMainWindow::eventFilter(obj, event);
 }
 
 //
@@ -62,4 +82,19 @@ void MainWindow::loadImage()
 void MainWindow::activateMenu()
 {
 
+}
+
+// Маска, выделяющая монетку
+void MainWindow::MoneyMask(int size)
+{
+    QImage *element = disk(size, QColor(Qt::black));
+
+    QImage* moneyMask = closing(image, element, (Qt::GlobalColor)Qt::black);
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*moneyMask));
+
+    repaint();
+
+    delete moneyMask;
+    delete element;
 }

@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "coindialog.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -21,14 +23,24 @@ private slots:
     void menuFileOpen();
     void menuFileExit();
 
+    // Редактирование
+    void menuEditCoinMask();
+
 private:
     void loadImage();
     void activateMenu();
+
+#include "morphology.h"
+
+public:
+    void MoneyMask(int size = 15);
 
 private:
     Ui::MainWindow *ui;
 
     QImage *image;
+
+    CoinDialog *coinDialog;
 };
 
 #endif // MAINWINDOW_H
