@@ -10,6 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = ImageProcessing
 TEMPLATE = app
+CONFIG += static
 
 
 SOURCES += main.cpp\
@@ -23,3 +24,4 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     coindialog.ui
+
