@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QPainter>
+
 // Морфологические операции
 QImage* MainWindow::
 erosion(QImage *origin, const QImage &element, const QColor pixelColor,
@@ -21,12 +23,9 @@ erosion(QImage *origin, const QImage &element, const QColor pixelColor,
     QImage *erosionResult = new QImage(width, height, origin->format());
     erosionResult->fill(background);
 
-    QPainter painter;
-
     QColor pixelColor1(pixelColor);
     pixelColor1.setAlpha(255);
 
-    painter.begin(erosionResult);
     for (int x = 0; x < width; x++)
     {
         xRect       = x - elementRadX;
@@ -68,10 +67,9 @@ erosion(QImage *origin, const QImage &element, const QColor pixelColor,
                     }
 
             if (flag)
-                painter.drawImage(xRect, yRect, element);
+                erosionResult->setPixel(x, y, pixelColor1.rgba());
         }
     }
-    painter.end();
 
     return erosionResult;
 }

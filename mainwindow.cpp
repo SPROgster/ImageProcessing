@@ -4,6 +4,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "coindialog.h"
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -11,17 +13,22 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     coinDialog = new CoinDialog(this);
-    coinDialog->installEventFilter(this);
+    coinDialog->setParent(this);
 
     // File
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(menuFileOpen()));
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(menuFileExit()));
+
+    // Edit
+    connect(ui->actionCoinMask, SIGNAL(triggered()), this, SLOT(menuEditCoinMask()));
 
     image = new QImage();
 }
 
 MainWindow::~MainWindow()
 {
+    delete coinDialog;
+
     delete image;
     delete ui;
 }
@@ -41,19 +48,10 @@ void MainWindow::menuFileExit()
 
 void MainWindow::menuEditCoinMask()
 {
-    ;
-}
+    int result = coinDialog->exec();
 
-//
-//  Фильтр событий
-//
-bool MainWindow::eventFilter(QObject *obj, QEvent *event)
-{
-    if (obj == coinDialog)
-    {
-    }
-
-    return QMainWindow::eventFilter(obj, event);
+    if (result)
+        MoneyMask(coinDialog->value);
 }
 
 //
@@ -81,7 +79,7 @@ void MainWindow::loadImage()
 
 void MainWindow::activateMenu()
 {
-
+    ui->actionCoinMask->setEnabled(true);
 }
 
 // Маска, выделяющая монетку

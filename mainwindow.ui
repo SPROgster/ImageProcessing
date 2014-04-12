@@ -116,6 +116,9 @@
    </property>
   </action>
   <action name="actionCoinMask">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Создать маску для монеток</string>
    </property>

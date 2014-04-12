@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 
-#include "coindialog.h"
+class CoinDialog;
 
 namespace Ui {
 class MainWindow;
