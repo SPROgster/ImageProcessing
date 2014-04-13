@@ -185,6 +185,9 @@
           <property name="minimum">
            <number>1</number>
           </property>
+          <property name="value">
+           <number>15</number>
+          </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -210,6 +213,9 @@
          <widget class="QSpinBox" name="maskSpin">
           <property name="minimum">
            <number>1</number>
+          </property>
+          <property name="value">
+           <number>15</number>
           </property>
          </widget>
         </item>

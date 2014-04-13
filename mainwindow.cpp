@@ -1,5 +1,6 @@
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QPixmap>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -25,13 +26,26 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->maskSlider, SIGNAL(sliderMoved(int)), this, SLOT(maskSliderChanged(int)));
     connect(ui->maskSpin, SIGNAL(valueChanged(int)), this, SLOT(maskSpinChanged(int)));
 
-    maskValue = 1;
+    //Обработка рисования маски
+    ui->imageView->installEventFilter(this);
+
+    masking = false;
+    maskIsEmpty = true;
+
+    maskValue = 15;
+
+    maskCursor = 0;
+    maskImage = 0;
 
     ui->maskButton->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
     ui->maskCancel->setEnabled(false);
     ui->maskSlider->setEnabled(false);
     ui->maskSpin->setEnabled(false);
+
+    maskMask = 0;
+
+    selection = 0;
 
     // История
     historyLayout = ui->historyAreaContents->layout();
@@ -45,6 +59,17 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     clearHistory();
+
+    if (maskMask != 0)
+        delete maskMask;
+
+    if (selection != 0)
+        delete selection;
+
+    if (maskImage != 0)
+        delete maskImage;
+    if (maskCursor != 0)
+        delete maskCursor;
 
     delete image;
     delete ui;
@@ -96,22 +121,55 @@ void MainWindow::maskButtonClicked(bool checked)
 {
     if (checked)
     {
-        ui->imageView->setCursor(QCursor(Qt::CrossCursor));
+        maskImage = disk(maskValue, QColor(255, 100, 100, 100));
+        maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
+
+        delete maskImage;
+        maskImage = disk(maskValue, Qt::white);
+
+        masking = true;
+        ui->imageView->setCursor(*maskCursor);
+
+        ui->maskSlider->setEnabled(true);
+        ui->maskSpin->setEnabled(true);
+        ui->maskCancel->setEnabled(false);
+        ui->maskMergeButton->setEnabled(false);
     }
     else
     {
         ui->imageView->setCursor(QCursor(Qt::ArrowCursor));
+
+        if (maskImage != 0)
+        {
+            delete maskImage;
+            maskImage = 0;
+        }
+        if (maskCursor != 0)
+        {
+            delete maskCursor;
+            maskCursor = 0;
+        }
+
+        if (~maskIsEmpty)
+        {
+            ui->maskCancel->setEnabled(true);
+            ui->maskMergeButton->setEnabled(true);
+        }
+        ui->maskSlider->setEnabled(false);
+        ui->maskSpin->setEnabled(false);
     }
 }
 
 void MainWindow::maskMergeButtonClicked()
 {
-    ;
+    ui->maskCancel->setEnabled(false);
+    ui->maskMergeButton->setEnabled(false);
 }
 
 void MainWindow::maskCancelButtonClicked()
 {
-    ;
+    ui->maskCancel->setEnabled(false);
+    ui->maskMergeButton->setEnabled(false);
 }
 
 void MainWindow::maskSpinChanged(int value)
@@ -157,16 +215,22 @@ void MainWindow::activateMenu()
 {
     //Включение панели маски
     ui->maskButton->setEnabled(true);
-    ui->maskMergeButton->setEnabled(true);
-    ui->maskCancel->setEnabled(true);
-    ui->maskSlider->setEnabled(true);
-    ui->maskSpin->setEnabled(true);
-
 }
 
 void MainWindow::maskValueChanged(int value)
 {
     maskValue = value;
+
+    delete maskImage;
+    delete maskCursor;
+
+    maskImage = disk(maskValue, QColor(255, 100, 100, 100));
+    maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
+
+    ui->imageView->setCursor(*maskCursor);
+
+    delete maskImage;
+    maskImage = disk(maskValue, Qt::white);
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)

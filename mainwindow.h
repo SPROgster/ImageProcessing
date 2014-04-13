@@ -51,7 +51,16 @@ private:
 
     QImage *image;
 
+    bool masking;
+    bool maskIsEmpty;
+
     int maskValue;
+    QImage* maskImage;
+    QCursor* maskCursor;
+
+    QImage* maskMask;
+
+    QImage* selection;
 
     QLayout* historyLayout;
     QSpacerItem* historySpacer;

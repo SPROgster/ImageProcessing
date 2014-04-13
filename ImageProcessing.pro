@@ -27,3 +27,5 @@ CONFIG   += static
 
 OTHER_FILES += \
     res/maskButton.bmp
+
+RESOURCES +=
