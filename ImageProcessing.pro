@@ -14,11 +14,13 @@ CONFIG += static
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
+    mainwindow.cpp \
+    imageentry.cpp \
     coindialog.cpp \
     morphology.cpp
 
 HEADERS  += mainwindow.h \
+    imageentry.h \
     coindialog.h \
     morphology.h
 
