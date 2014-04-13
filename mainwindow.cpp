@@ -66,8 +66,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::MouseButtonPress)
     {
         int itemCount = historyLayout->count() - 1,
-                index = historyLayout->indexOf((QWidget*)obj),
-                 size = historyList.size();
+                index = historyLayout->indexOf((QWidget*)obj);
 
         if (index >= 0 && index < itemCount)
         {
