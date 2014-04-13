@@ -501,11 +501,13 @@ void MainWindow::showCurveWindow()
 void MainWindow::curveChanged()
 {
     QImage* buffer;
+    QImage alphaChannel;
     if (selection == 0)
         buffer = new QImage(*image);
     else
     {
         buffer = new QImage(*selection);
+        alphaChannel = selection->alphaChannel();
     }
 
     KisCubicCurve curve = curveWindow->curve();
@@ -533,6 +535,7 @@ void MainWindow::curveChanged()
     else
     {
         *selection = *buffer;
+        selection->setAlphaChannel(alphaChannel);
         selectionPreview();
     }
 
