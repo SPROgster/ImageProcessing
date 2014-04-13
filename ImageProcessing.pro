@@ -17,12 +17,14 @@ SOURCES += main.cpp\
     mainwindow.cpp \
     imageentry.cpp \
     coindialog.cpp \
-    morphology.cpp
+    morphology.cpp \
+    structuralElements.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     coindialog.h \
-    morphology.h
+    morphology.h \
+    structuralElements.h
 
 FORMS    += mainwindow.ui \
     coindialog.ui

@@ -16,8 +16,5 @@ QImage *closing(QImage *origin, QImage *element, const QColor pixelColor,
 QImage *intersection(QImage *A, QImage *B);
 QImage *complement  (QImage *A, QImage *B);
 */
-// Структурные элементы
-QImage *ring        (int radius, const QColor color);
-QImage *disk        (int radius, const QColor color);
 
 #endif // MORPHOLOGY_H

@@ -40,6 +40,7 @@ private:
     void addEntryToHistory(const QString& text = "", int index = -1);
     void clearHistory();
 
+#include "structuralElements.h"
 #include "morphology.h"
 
 public:
