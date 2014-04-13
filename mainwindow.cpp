@@ -25,6 +25,8 @@ MainWindow::MainWindow(QWidget *parent) :
     maskValue = 1;
 
     ui->maskButton->setEnabled(false);
+    ui->maskMergeButton->setEnabled(false);
+    ui->maskCancel->setEnabled(false);
     ui->maskSlider->setEnabled(false);
     ui->maskSpin->setEnabled(false);
 
@@ -130,6 +132,8 @@ void MainWindow::activateMenu()
 {
     //Включение панели маски
     ui->maskButton->setEnabled(true);
+    ui->maskMergeButton->setEnabled(true);
+    ui->maskCancel->setEnabled(true);
     ui->maskSlider->setEnabled(true);
     ui->maskSpin->setEnabled(true);
 
