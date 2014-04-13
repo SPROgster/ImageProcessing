@@ -187,7 +187,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (event->type() == QEvent::Close)
         {
             *image = (QImage)(ui->imageView->pixmap()->toImage());
-            addEntryToHistory("Кривая яркости");
+            if (selection == 0)
+                addEntryToHistory("Кривая яркости");
 
             delete curveWindow;
             curveWindow = new KisCurveWidget();
@@ -496,7 +497,10 @@ void MainWindow::showCurveWindow()
 
 void MainWindow::curveChanged()
 {
-    QImage buffer(*image);
+    if (selection == 0)
+        QImage buffer(*image);
+    else
+        QImage buffer(*selection);
 
     KisCubicCurve curve = curveWindow->curve();
 
@@ -512,7 +516,10 @@ void MainWindow::curveChanged()
             buffer.setPixel(x, y, pixelColor.rgb());
         }
 
-    ui->imageView->setPixmap(QPixmap::fromImage(buffer));
+    if (selection == 0)
+        ui->imageView->setPixmap(QPixmap::fromImage(buffer));
+    else
+        selectionMerging();
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)
