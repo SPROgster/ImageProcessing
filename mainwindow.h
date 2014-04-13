@@ -83,6 +83,8 @@ private:
 
     //Выделение
 private:
+    void selectionMerging();
+
     QImage* selection;
 
 private:

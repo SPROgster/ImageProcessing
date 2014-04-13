@@ -287,14 +287,9 @@ void MainWindow::maskMergeButtonClicked()
     ui->maskCancel->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
 
-    QPainter painter(image);
-    painter.save();
-    painter.drawImage(0, 0, *selection);
-    painter.restore();
-
-    ui->imageView->setPixmap(QPixmap::fromImage(*image));
-
     maskIsEmpty = true;
+
+    selectionMerging();
 
     addEntryToHistory("После маски");
 
@@ -563,4 +558,14 @@ void MainWindow::clearHistory()
     historyList.clear();
 
     historyLayout->addItem(historySpacer);
+}
+
+void MainWindow::selectionMerging()
+{
+    QPainter painter(image);
+    painter.save();
+    painter.drawImage(0, 0, *selection);
+    painter.restore();
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
 }
