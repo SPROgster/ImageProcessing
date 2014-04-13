@@ -112,6 +112,28 @@ void MainWindow::menuEditCurve()
 //
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    if (obj == curveWindow)
+    {
+        if (event->type() == QEvent::MouseButtonRelease)
+            curveChanged();
+
+        if (event->type() == QEvent::Close)
+        {
+            *image = (QImage)(ui->imageView->pixmap()->toImage());
+            if (selection == 0)
+                addEntryToHistory("Кривая яркости");
+            else
+            {
+                selectionMerging();
+            }
+
+            delete curveWindow;
+            curveWindow = new KisCurveWidget();
+            curveWindow->setWindowTitle("Кривая яркости");
+            curveWindow->installEventFilter(this);
+        }
+    }
+    else
     if (masking)
     {
         if (obj == (QObject*)(ui->imageView))
@@ -175,25 +197,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             {
                 maskingDrawing = false;
             }
-        }
-    }
-
-    else
-    if (obj == curveWindow)
-    {
-        if (event->type() == QEvent::MouseButtonRelease)
-            curveChanged();
-
-        if (event->type() == QEvent::Close)
-        {
-            *image = (QImage)(ui->imageView->pixmap()->toImage());
-            if (selection == 0)
-                addEntryToHistory("Кривая яркости");
-
-            delete curveWindow;
-            curveWindow = new KisCurveWidget();
-            curveWindow->setWindowTitle("Кривая яркости");
-            curveWindow->installEventFilter(this);
         }
     }
 
@@ -497,29 +500,43 @@ void MainWindow::showCurveWindow()
 
 void MainWindow::curveChanged()
 {
+    QImage* buffer;
     if (selection == 0)
-        QImage buffer(*image);
+        buffer = new QImage(*image);
     else
-        QImage buffer(*selection);
+    {
+        buffer = new QImage(*selection);
+    }
 
     KisCubicCurve curve = curveWindow->curve();
 
-    for(int x = 0; x < buffer.width(); x++)
-        for(int y = 0; y < buffer.height(); y++)
+    for(int x = 0; x < buffer->width(); x++)
+        for(int y = 0; y < buffer->height(); y++)
         {
-            QColor pixelColor(buffer.pixel(x, y));
+            QColor pixelColor(buffer->pixel(x, y));
 
-            pixelColor.setHsvF(pixelColor.hueF(),
-                               pixelColor.saturationF(),
-                               curve.value(pixelColor.valueF()));
+            int alpha = pixelColor.alpha();
 
-            buffer.setPixel(x, y, pixelColor.rgb());
+            if (alpha > 0)
+            {
+                pixelColor.setHslF(pixelColor.hueF(),
+                                   pixelColor.saturationF(),
+                                   curve.value(pixelColor.valueF()));
+                pixelColor.setAlpha(alpha);
+
+                buffer->setPixel(x, y, pixelColor.rgba());
+            }
         }
 
     if (selection == 0)
-        ui->imageView->setPixmap(QPixmap::fromImage(buffer));
+        ui->imageView->setPixmap(QPixmap::fromImage(*buffer));
     else
-        selectionMerging();
+    {
+        *selection = *buffer;
+        selectionPreview();
+    }
+
+    delete buffer;
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)
