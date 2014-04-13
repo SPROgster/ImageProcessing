@@ -24,6 +24,10 @@ protected:
 
 private slots:
 
+    // Слоты панели маски
+    void maskSpinChanged(int value);
+    void maskSliderChanged(int value);
+
     // Файл
     void menuFileOpen();
     void menuFileExit();
@@ -32,6 +36,8 @@ private:
     void loadImage();
     void activateMenu();
 
+    void maskValueChanged(int value);
+
     void addEntryToHistory(const QString& text = "", int index = -1);
     void clearHistory();
 
@@ -39,6 +45,8 @@ private:
     Ui::MainWindow *ui;
 
     QImage *image;
+
+    int maskValue;
 
     QLayout* historyLayout;
     QSpacerItem* historySpacer;

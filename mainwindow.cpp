@@ -18,6 +18,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
     image = new QImage();
 
+    //Маска
+    connect(ui->maskSlider, SIGNAL(sliderMoved(int)), this, SLOT(maskSliderChanged(int)));
+    connect(ui->maskSpin, SIGNAL(valueChanged(int)), this, SLOT(maskSpinChanged(int)));
+
+    maskValue = 1;
+
+    ui->maskButton->setEnabled(false);
+    ui->maskSlider->setEnabled(false);
+    ui->maskSpin->setEnabled(false);
+
+    // История
     historyLayout = ui->historyAreaContents->layout();
 
     historySpacer = new QSpacerItem(10, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
@@ -77,6 +88,18 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     return QMainWindow::eventFilter(obj, event);
 }
 
+void MainWindow::maskSpinChanged(int value)
+{
+    ui->maskSlider->setValue(value);
+    maskValueChanged(value);
+}
+
+void MainWindow::maskSliderChanged(int value)
+{
+    ui->maskSpin->setValue(value);
+    maskValueChanged(value);
+}
+
 //
 //  Загрузка изображения
 //
@@ -106,7 +129,16 @@ void MainWindow::loadImage()
 
 void MainWindow::activateMenu()
 {
+    //Включение панели маски
+    ui->maskButton->setEnabled(true);
+    ui->maskSlider->setEnabled(true);
+    ui->maskSpin->setEnabled(true);
 
+}
+
+void MainWindow::maskValueChanged(int value)
+{
+    maskValue = value;
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)

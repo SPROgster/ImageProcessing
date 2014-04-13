@@ -124,6 +124,25 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="maskMergeButton">
+          <property name="minimumSize">
+           <size>
+            <width>43</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>43</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Слить</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QSlider" name="maskSlider">
           <property name="minimum">
            <number>1</number>
