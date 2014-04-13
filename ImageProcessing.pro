@@ -14,10 +14,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    imageentry.cpp
+    imageentry.cpp \
+    structuralElements.cpp
 
 HEADERS  += mainwindow.h \
-    imageentry.h
+    imageentry.h \
+    structuralElements.h
 
 FORMS    += mainwindow.ui
 

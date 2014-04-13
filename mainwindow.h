@@ -44,6 +44,8 @@ private:
     void addEntryToHistory(const QString& text = "", int index = -1);
     void clearHistory();
 
+    #include "structuralElements.h"
+
 private:
     Ui::MainWindow *ui;
 
