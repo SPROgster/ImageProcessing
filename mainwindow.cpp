@@ -284,6 +284,7 @@ void MainWindow::curveChanged()
 void MainWindow::addEntryToHistory(const QString &text, int index)
 {
     imageEntry* entry = new imageEntry(ui->historyAreaContents, image, text);
+    entry->setSelected(true);
 
     historyLayout->removeItem(historySpacer);
 
@@ -297,7 +298,10 @@ void MainWindow::addEntryToHistory(const QString &text, int index)
             delete historyList.at(i);
             historyList.removeAt(i);
         }
+        historyList.append(entry);
     }
+    for (int i = 0; i < historyList.size() - 1; i++)
+        historyList.at(i)->setSelected(false);
 
     historyLayout->addWidget(entry);
     historyLayout->setAlignment(entry, Qt::AlignTop);
