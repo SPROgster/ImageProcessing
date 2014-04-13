@@ -1,7 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QList>
 #include <QMainWindow>
+#include <QSpacerItem>
+
+#include "imageentry.h"
 
 #include "kis_curve_widget.h"
 
@@ -34,6 +38,9 @@ private:
     void loadImage();
     void activateMenu();
 
+    void addEntryToHistory(const QString& text = "", int index = -1);
+    void clearHistory();
+
 // Кривая яркости
 private:
     void showCurveWindow();
@@ -49,6 +56,10 @@ private:
     Ui::MainWindow *ui;
 
     QImage *image;
+
+    QLayout* historyLayout;
+    QSpacerItem* historySpacer;
+    QList<imageEntry*> historyList;
 
     KisCurveWidget *curveWindow;
 };

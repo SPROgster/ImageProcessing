@@ -13,13 +13,17 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
+    mainwindow.cpp \
     kis_cubic_curve.cpp \
-    kis_curve_widget.cpp
+    kis_curve_widget.cpp \
+    imageentry.cpp
 
 HEADERS  += mainwindow.h \
     kis_cubic_curve.h \
     kis_curve_widget.h \
-    kis_curve_widget_p.h
+    kis_curve_widget_p.h \
+    imageentry.h
 
 FORMS    += mainwindow.ui
+
+CONFIG   += static
