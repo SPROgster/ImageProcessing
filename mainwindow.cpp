@@ -60,9 +60,6 @@ MainWindow::~MainWindow()
 {
     clearHistory();
 
-    if (selection != 0)
-        delete selection;
-
     if (maskImage != 0)
         delete maskImage;
     if (maskCursorImage != 0)
@@ -111,6 +108,17 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 painterUi.restore();
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
+
+                for (int maskX = 0; maskX < maskCursorImage->width(); maskX++)
+                    for (int maskY = 0; maskY < maskCursorImage->height(); maskY++)
+                    {
+                        QColor pixelColorMask(maskCursorImage->pixel(maskX, maskY));
+                        if (pixelColorMask.alpha() > 0)
+                        {
+                            QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
+                            selection->setPixel(maskX + x, maskY + y, pixelColorMask.rgba());
+                        }
+                    }
             }
             else if(event->type() == QEvent::MouseMove)
             {
@@ -129,6 +137,16 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
 
+                for (int maskX = 0; maskX < maskCursorImage->width(); maskX++)
+                    for (int maskY = 0; maskY < maskCursorImage->height(); maskY++)
+                    {
+                        QColor pixelColorMask(maskCursorImage->pixel(maskX, maskY));
+                        if (pixelColorMask.alpha() > 0)
+                        {
+                            QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
+                            selection->setPixel(maskX + x, maskY + y, pixelColorImage.rgba());
+                        }
+                    }
             }
             else if(event->type() == QEvent::MouseButtonRelease)
             {
@@ -228,6 +246,17 @@ void MainWindow::maskMergeButtonClicked()
     ui->maskCancel->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
 
+    QPainter painter(image);
+    painter.save();
+    painter.drawImage(0, 0, *selection);
+    painter.restore();
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+    maskIsEmpty = true;
+
+    addEntryToHistory("После маски");
+
     delete selection;
     delete maskedImage;
 }
@@ -239,6 +268,10 @@ void MainWindow::maskCancelButtonClicked()
 
     delete selection;
     delete maskedImage;
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+    maskIsEmpty = true;
 }
 
 void MainWindow::maskSpinChanged(int value)
@@ -264,6 +297,11 @@ void MainWindow::loadImage()
         image->load(fileName);
 
         ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+        ui->imageView->setMinimumWidth(image->width());
+        ui->imageView->setMaximumWidth(image->width());
+        ui->imageView->setMinimumHeight(image->height());
+        ui->imageView->setMaximumHeight(image->height());
 
         activateMenu();
 
@@ -345,12 +383,4 @@ void MainWindow::clearHistory()
     historyList.clear();
 
     historyLayout->addItem(historySpacer);
-}
-
-void MainWindow::maskToSelection()
-{
-    if (!maskIsEmpty)
-    {
-        ;
-    }
 }
