@@ -4,6 +4,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "imageentry.h"
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -49,6 +51,12 @@ void MainWindow::loadImage()
         ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
         activateMenu();
+
+        QLayout* historyLayout = ui->historyAreaContents->layout();
+        historyLayout->addWidget(new imageEntry(ui->historyAreaContents, image, "Файл открыт 1"));
+        historyLayout->addWidget(new imageEntry(ui->historyAreaContents, image, "Файл открыт 2"));
+        historyLayout->addWidget(new imageEntry(ui->historyAreaContents, image, "Файл открыт 3"));
+        historyLayout->setAlignment(historyLayout, Qt::AlignTop);
     }
     catch (...)
     {

@@ -46,7 +46,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>577</width>
+         <width>558</width>
          <height>452</height>
         </rect>
        </property>
@@ -113,13 +113,13 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>100</width>
+     <width>119</width>
      <height>111</height>
     </size>
    </property>
    <property name="maximumSize">
     <size>
-     <width>100</width>
+     <width>119</width>
      <height>524287</height>
     </size>
    </property>
@@ -142,6 +142,12 @@
      </property>
      <item>
       <widget class="QScrollArea" name="historyArea">
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOn</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
        <property name="widgetResizable">
         <bool>true</bool>
        </property>
@@ -153,11 +159,14 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>98</width>
+          <width>100</width>
           <height>432</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="spacing">
+          <number>1</number>
+         </property>
          <property name="leftMargin">
           <number>0</number>
          </property>
