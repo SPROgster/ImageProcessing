@@ -19,6 +19,9 @@ MainWindow::MainWindow(QWidget *parent) :
     image = new QImage();
 
     //Маска
+    connect(ui->maskButton, SIGNAL(clicked(bool)), this, SLOT(maskButtonClicked(bool)));
+    connect(ui->maskMergeButton, SIGNAL(clicked()), this, SLOT(maskMergeButtonClicked()));
+    connect(ui->maskCancel, SIGNAL(clicked()), this, SLOT(maskCancelButtonClicked()));
     connect(ui->maskSlider, SIGNAL(sliderMoved(int)), this, SLOT(maskSliderChanged(int)));
     connect(ui->maskSpin, SIGNAL(valueChanged(int)), this, SLOT(maskSpinChanged(int)));
 
@@ -87,6 +90,28 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     }
 
     return QMainWindow::eventFilter(obj, event);
+}
+
+void MainWindow::maskButtonClicked(bool checked)
+{
+    if (checked)
+    {
+        ui->imageView->setCursor(QCursor(Qt::CrossCursor));
+    }
+    else
+    {
+        ui->imageView->setCursor(QCursor(Qt::ArrowCursor));
+    }
+}
+
+void MainWindow::maskMergeButtonClicked()
+{
+    ;
+}
+
+void MainWindow::maskCancelButtonClicked()
+{
+    ;
 }
 
 void MainWindow::maskSpinChanged(int value)

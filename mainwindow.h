@@ -25,6 +25,9 @@ protected:
 private slots:
 
     // Слоты панели маски
+    void maskButtonClicked(bool checked);
+    void maskMergeButtonClicked();
+    void maskCancelButtonClicked();
     void maskSpinChanged(int value);
     void maskSliderChanged(int value);
 
