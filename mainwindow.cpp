@@ -1,6 +1,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPixmap>
+#include <QMouseEvent>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -35,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
     maskValue = 15;
 
     maskCursor = 0;
+    maskCursorImage = 0;
     maskImage = 0;
 
     ui->maskButton->setEnabled(false);
@@ -42,8 +44,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->maskCancel->setEnabled(false);
     ui->maskSlider->setEnabled(false);
     ui->maskSpin->setEnabled(false);
-
-    maskMask = 0;
 
     selection = 0;
 
@@ -60,14 +60,13 @@ MainWindow::~MainWindow()
 {
     clearHistory();
 
-    if (maskMask != 0)
-        delete maskMask;
-
     if (selection != 0)
         delete selection;
 
     if (maskImage != 0)
         delete maskImage;
+    if (maskCursorImage != 0)
+        delete maskCursorImage;
     if (maskCursor != 0)
         delete maskCursor;
 
@@ -93,6 +92,52 @@ void MainWindow::menuFileExit()
 //
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    if (masking)
+    {
+        if (obj == (QObject*)(ui->imageView))
+        {
+            if(event->type() == QEvent::MouseButtonPress)
+            {
+                maskingDrawing = true;
+
+                QMouseEvent* mouseEvent = (QMouseEvent*)event;
+
+                int x = mouseEvent->x() - maskValue - 1;
+                int y = mouseEvent->y() - maskValue - 1;
+
+                QPainter painterUi(maskedImage);
+                painterUi.save();
+                painterUi.drawImage(x, y, *maskCursorImage);
+                painterUi.restore();
+
+                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
+            }
+            else if(event->type() == QEvent::MouseMove)
+            {
+                if (maskingDrawing)
+                    maskIsEmpty = false;
+
+                QMouseEvent* mouseEvent = (QMouseEvent*)event;
+
+                int x = mouseEvent->x() - maskValue - 1;
+                int y = mouseEvent->y() - maskValue - 1;
+
+                QPainter painterUi(maskedImage);
+                painterUi.save();
+                painterUi.drawImage(x, y, *maskCursorImage);
+                painterUi.restore();
+
+                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
+
+            }
+            else if(event->type() == QEvent::MouseButtonRelease)
+            {
+                maskingDrawing = false;
+            }
+        }
+    }
+
+    else
     if (event->type() == QEvent::MouseButtonPress)
     {
         int itemCount = historyLayout->count() - 1,
@@ -120,20 +165,28 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 void MainWindow::maskButtonClicked(bool checked)
 {
     if (checked)
-    {
-        maskImage = disk(maskValue, QColor(255, 100, 100, 100));
-        maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
+    {   
+        maskCursorImage = disk(maskValue, QColor(255, 100, 100, 255));
+        maskCursor = new QCursor(QPixmap::fromImage(*maskCursorImage));
 
-        delete maskImage;
         maskImage = disk(maskValue, Qt::white);
 
         masking = true;
+        maskingDrawing = false;
         ui->imageView->setCursor(*maskCursor);
 
         ui->maskSlider->setEnabled(true);
         ui->maskSpin->setEnabled(true);
         ui->maskCancel->setEnabled(false);
         ui->maskMergeButton->setEnabled(false);
+
+        if (maskIsEmpty)
+        {
+            selection = new QImage(image->size(), QImage::Format_ARGB32);
+            selection->fill(Qt::transparent);
+
+            maskedImage = new QImage(*image);
+        }
     }
     else
     {
@@ -144,16 +197,26 @@ void MainWindow::maskButtonClicked(bool checked)
             delete maskImage;
             maskImage = 0;
         }
+        if (maskCursorImage != 0)
+        {
+            delete maskCursorImage;
+            maskCursorImage = 0;
+        }
         if (maskCursor != 0)
         {
             delete maskCursor;
             maskCursor = 0;
         }
 
-        if (~maskIsEmpty)
+        if (!maskIsEmpty)
         {
             ui->maskCancel->setEnabled(true);
             ui->maskMergeButton->setEnabled(true);
+        }
+        else
+        {
+            delete selection;
+            delete maskedImage;
         }
         ui->maskSlider->setEnabled(false);
         ui->maskSpin->setEnabled(false);
@@ -164,12 +227,18 @@ void MainWindow::maskMergeButtonClicked()
 {
     ui->maskCancel->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
+
+    delete selection;
+    delete maskedImage;
 }
 
 void MainWindow::maskCancelButtonClicked()
 {
     ui->maskCancel->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
+
+    delete selection;
+    delete maskedImage;
 }
 
 void MainWindow::maskSpinChanged(int value)
@@ -224,7 +293,7 @@ void MainWindow::maskValueChanged(int value)
     delete maskImage;
     delete maskCursor;
 
-    maskImage = disk(maskValue, QColor(255, 100, 100, 100));
+    maskImage = disk(maskValue, QColor(255, 100, 100, 255));
     maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
     ui->imageView->setCursor(*maskCursor);
@@ -276,4 +345,12 @@ void MainWindow::clearHistory()
     historyList.clear();
 
     historyLayout->addItem(historySpacer);
+}
+
+void MainWindow::maskToSelection()
+{
+    if (!maskIsEmpty)
+    {
+        ;
+    }
 }

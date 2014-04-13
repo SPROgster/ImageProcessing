@@ -51,17 +51,24 @@ private:
 
     QImage *image;
 
+    //Макса
+private:
     bool masking;
+    bool maskingDrawing;
     bool maskIsEmpty;
 
     int maskValue;
+    QImage* maskCursorImage;
     QImage* maskImage;
     QCursor* maskCursor;
 
-    QImage* maskMask;
+    QImage* maskedImage;
 
+    //Выделение
+private:
     QImage* selection;
 
+private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;
     QList<imageEntry*> historyList;
