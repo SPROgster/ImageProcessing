@@ -62,6 +62,7 @@ void MainWindow::menuFileExit()
 void MainWindow::menuEditOtsu()
 {
     otsuBinarization();
+    addEntryToHistory("Отцу");
 }
 
 void MainWindow::menuEditCurve()
@@ -80,18 +81,13 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             curveChanged();
 
         if (event->type() == QEvent::Close)
+        {
             *image = (QImage)(ui->imageView->pixmap()->toImage());
+            addEntryToHistory("Кривая яркости");
+        }
     }
 
-    return QMainWindow::eventFilter(obj, event);
-}
-
-//
-//  Фильтр событий
-//
-bool MainWindow::eventFilter(QObject *obj, QEvent *event)
-{
-    if (event->type() == QEvent::MouseButtonPress)
+    else if (event->type() == QEvent::MouseButtonPress)
     {
         int itemCount = historyLayout->count() - 1,
                 index = historyLayout->indexOf((QWidget*)obj),
