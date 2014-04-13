@@ -84,6 +84,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         {
             *image = (QImage)(ui->imageView->pixmap()->toImage());
             addEntryToHistory("Кривая яркости");
+
+            delete curveWindow;
+            curveWindow = new KisCurveWidget();
+            curveWindow->setWindowTitle("Кривая яркости");
+            curveWindow->installEventFilter(this);
         }
     }
 
