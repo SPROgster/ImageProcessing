@@ -63,7 +63,11 @@ void MainWindow::menuEditCoinMask()
     int result = coinDialog->exec();
 
     if (result)
+    {
         MoneyMask(coinDialog->value);
+        *image = (QImage)(ui->imageView->pixmap()->toImage());
+        addEntryToHistory("Замыкание диском");
+    }
 }
 
 //
