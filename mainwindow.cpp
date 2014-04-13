@@ -576,3 +576,16 @@ void MainWindow::selectionMerging()
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
 }
+
+void MainWindow::selectionPreview()
+{
+    QImage buffer(*image);
+    QPainter painter(&buffer);
+    painter.save();
+    painter.drawImage(0, 0, *selection);
+    painter.restore();
+
+    ui->imageView->setPixmap(QPixmap::fromImage(buffer));
+
+    repaint();
+}
