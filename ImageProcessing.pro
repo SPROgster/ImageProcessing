@@ -22,3 +22,6 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 CONFIG   += static
+
+OTHER_FILES += \
+    res/maskButton.bmp
