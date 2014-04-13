@@ -116,7 +116,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                         if (pixelColorMask.alpha() > 0)
                         {
                             QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
-                            selection->setPixel(maskX + x, maskY + y, pixelColorMask.rgba());
+                            selection->setPixel(maskX + x, maskY + y, pixelColorImage.rgba());
                         }
                     }
             }
