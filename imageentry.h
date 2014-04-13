@@ -19,9 +19,9 @@ public:
     void setLabel(const QString &newText);
     void setImage(const QImage* newImage);
 
-    void setSelected(bool isSelected);
+    const QImage& getImage();
 
-    QImage* getImage();
+    void setSelected(bool isSelected);
 
 signals:
 
@@ -34,6 +34,8 @@ private:
     QImage* image;
     QImage* thumbnail;
     QLabel* label;
+
+    void* data;
 };
 
 #endif // IMAGEENTRY_H

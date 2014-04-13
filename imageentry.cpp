@@ -15,6 +15,8 @@ imageEntry::imageEntry(QWidget *parent, QImage *newImage, const QString &text) :
         thumbnail = new QImage(image->scaled(THUMBW, THUMBH));
         label = new QLabel(text, this);
     }
+    label->setLineWidth(3);
+
     label->setAlignment(Qt::AlignHCenter & Qt::AlignBottom);
 
     label->setMinimumWidth(THUMBW);
@@ -40,6 +42,11 @@ imageEntry::~imageEntry()
 void imageEntry::setLabel(const QString &newText)
 {
     label->setText(newText);
+}
+
+const QImage &imageEntry::getImage()
+{
+    return *image;
 }
 
 void imageEntry::setSelected(bool isSelected)
