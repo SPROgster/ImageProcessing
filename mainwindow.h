@@ -67,6 +67,7 @@ private:
     //Выделение
 private:
     void selectionMerging();
+    void selectionPreview();
 
     QImage* selection;
 
