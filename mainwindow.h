@@ -58,7 +58,6 @@ private:
     bool maskIsEmpty;
 
     int maskValue;
-    QImage* maskCursorImage;
     QImage* maskImage;
     QCursor* maskCursor;
 
