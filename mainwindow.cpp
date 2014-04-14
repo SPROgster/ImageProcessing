@@ -43,7 +43,6 @@ MainWindow::MainWindow(QWidget *parent) :
     maskValue = 15;
 
     maskCursor = 0;
-    maskCursorImage = 0;
     maskImage = 0;
 
     ui->maskButton->setEnabled(false);
@@ -80,8 +79,6 @@ MainWindow::~MainWindow()
 
     if (maskImage != 0)
         delete maskImage;
-    if (maskCursorImage != 0)
-        delete maskCursorImage;
     if (maskCursor != 0)
         delete maskCursor;
 
@@ -117,20 +114,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 QMouseEvent* mouseEvent = (QMouseEvent*)event;
 
-                int x = mouseEvent->x() - maskValue - 1;
-                int y = mouseEvent->y() - maskValue - 1;
+                int x = mouseEvent->x() - maskValue + 1;
+                int y = mouseEvent->y() - maskValue + 1;
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
-                painterUi.drawImage(x, y, *maskCursorImage);
+                painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
 
-                for (int maskX = 0; maskX < maskCursorImage->width(); maskX++)
-                    for (int maskY = 0; maskY < maskCursorImage->height(); maskY++)
+                for (int maskX = 0; maskX < maskImage->width(); maskX++)
+                    for (int maskY = 0; maskY < maskImage->height(); maskY++)
                     {
-                        QColor pixelColorMask(maskCursorImage->pixel(maskX, maskY));
+                        QColor pixelColorMask(maskImage->pixel(maskX, maskY));
                         if (pixelColorMask.alpha() > 0)
                         {
                             QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
@@ -145,20 +142,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 QMouseEvent* mouseEvent = (QMouseEvent*)event;
 
-                int x = mouseEvent->x() - maskValue - 1;
-                int y = mouseEvent->y() - maskValue - 1;
+                int x = mouseEvent->x() - maskValue + 1;
+                int y = mouseEvent->y() - maskValue + 1;
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
-                painterUi.drawImage(x, y, *maskCursorImage);
+                painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
 
-                for (int maskX = 0; maskX < maskCursorImage->width(); maskX++)
-                    for (int maskY = 0; maskY < maskCursorImage->height(); maskY++)
+                for (int maskX = 0; maskX < maskImage->width(); maskX++)
+                    for (int maskY = 0; maskY < maskImage->height(); maskY++)
                     {
-                        QColor pixelColorMask(maskCursorImage->pixel(maskX, maskY));
+                        QColor pixelColorMask(maskImage->pixel(maskX, maskY));
                         if (pixelColorMask.alpha() > 0)
                         {
                             QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
@@ -202,10 +199,8 @@ void MainWindow::maskButtonClicked(bool checked)
 {
     if (checked)
     {   
-        maskCursorImage = disk(maskValue, QColor(255, 100, 100, 255));
-        maskCursor = new QCursor(QPixmap::fromImage(*maskCursorImage));
-
-        maskImage = disk(maskValue, Qt::white);
+        maskImage = disk(maskValue, QColor(255, 100, 100, 255));
+        maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
         masking = true;
         maskingDrawing = false;
@@ -232,11 +227,6 @@ void MainWindow::maskButtonClicked(bool checked)
         {
             delete maskImage;
             maskImage = 0;
-        }
-        if (maskCursorImage != 0)
-        {
-            delete maskCursorImage;
-            maskCursorImage = 0;
         }
         if (maskCursor != 0)
         {
@@ -350,9 +340,6 @@ void MainWindow::maskValueChanged(int value)
     maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
     ui->imageView->setCursor(*maskCursor);
-
-    delete maskImage;
-    maskImage = disk(maskValue, Qt::white);
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)
