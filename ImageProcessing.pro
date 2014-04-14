@@ -32,7 +32,3 @@ OTHER_FILES += \
     res/maskButton.bmp
 
 RESOURCES +=
-
-LIBS += -L$$PWD/lib/ -llibopencv_core248
-
-INCLUDEPATH += $$PWD/include
