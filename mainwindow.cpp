@@ -453,9 +453,11 @@ void MainWindow::gammaCorrection(double value)
     }
     else
     {
-        *selection = *buffer;
+        if (selectionBuffer != 0)
+            delete selectionBuffer;
+        selectionBuffer = new QImage(*buffer);
 
-        selection->setAlphaChannel(*alphaChannel);
+        selectionBuffer->setAlphaChannel(*alphaChannel);
         selectionPreview();
 
         delete alphaChannel;
@@ -474,8 +476,20 @@ void MainWindow::gammaDialogShow()
 
             addEntryToHistory("Гамма коррекция");
         }
+        else
+        {
+            *selection = *selectionBuffer;
+        }
     }
     else
         if (selection == 0)
             ui->imageView->setPixmap(QPixmap::fromImage(*image));
+        else
+        {
+            if (selectionBuffer != 0)
+                delete selectionBuffer;
+
+            selectionBuffer = new QImage(*selection);
+            selectionPreview();
+        }
 }
