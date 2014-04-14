@@ -8,6 +8,8 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+CONFIG   += -static -static-libgcc
+
 TARGET = ImageProcessing
 TEMPLATE = app
 
@@ -25,8 +27,6 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     gammadialog.ui
-
-CONFIG   += static
 
 OTHER_FILES += \
     res/maskButton.bmp
