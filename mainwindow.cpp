@@ -441,11 +441,11 @@ void MainWindow::gammaCorrection(double value)
         {
             QColor pixelColor(buffer->pixel(x, y));
             qreal valueF = pixelColor.valueF();
-            valueF = exp(value * log(valueF));
-            pixelColor.setHsvF(pixelColor.hsvHueF(),
-                               pixelColor.hsvSaturationF(),
+            valueF = pow(valueF, value);
+            pixelColor.setHsvF(pixelColor.hueF(),
+                               pixelColor.saturationF(),
                                valueF);
-            buffer->setPixel(x, y, pixelColor.rgba());
+            buffer->setPixel(x, y, pixelColor.rgb());
         }
 
     if (selection == 0)
