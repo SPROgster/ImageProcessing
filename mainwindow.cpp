@@ -53,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->maskSpin->setEnabled(false);
 
     selection = 0;
+    selectionBuffer = 0;
 
     // История
     historyLayout = ui->historyAreaContents->layout();
@@ -73,6 +74,9 @@ MainWindow::~MainWindow()
     delete gammaCorrectionDialog;
 
     clearHistory();
+
+    if (selectionBuffer != 0)
+        delete selectionBuffer;
 
     if (maskImage != 0)
         delete maskImage;
