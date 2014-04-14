@@ -1,3 +1,5 @@
+#include <cmath>    // Для гамма коррекции
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPixmap>
@@ -62,6 +64,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Гамма коррекция
     gammaCorrectionDialog = new gammaDialog(this);
+
+    ui->actionGamma->setEnabled(false);
 }
 
 MainWindow::~MainWindow()
@@ -325,6 +329,8 @@ void MainWindow::loadImage()
 
 void MainWindow::activateMenu()
 {
+    ui->actionGamma->setEnabled(true);
+
     //Включение панели маски
     ui->maskButton->setEnabled(true);
 }
@@ -415,11 +421,61 @@ void MainWindow::selectionPreview()
 
 void MainWindow::gammaCorrection(double value)
 {
+    QImage* alphaChannel;
+    QImage* buffer;
 
+    if (selection == 0)
+        buffer = new QImage(*image);
+    else
+    {
+        buffer = new QImage(*selection);
+        alphaChannel = new QImage(selection->alphaChannel());
+    }
+
+    for (int x = 0; x < buffer->width(); x++)
+        for (int y = 0; y < buffer->height(); y++)
+        {
+            QColor pixelColor(buffer->pixel(x, y));
+            qreal valueF = pixelColor.valueF();
+            valueF = exp(value * log(valueF));
+            pixelColor.setHsvF(pixelColor.hslHueF(),
+                               pixelColor.hslSaturationF(),
+                               valueF);
+            buffer->setPixel(x, y, pixelColor.rgba());
+        }
+
+    if (selection == 0)
+    {
+        *image = *buffer;
+
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
+        repaint();
+    }
+    else
+    {
+        *selection = *buffer;
+
+        selection->setAlphaChannel(*alphaChannel);
+        selectionPreview();
+
+        delete alphaChannel;
+    }
+    delete buffer;
 }
 
 void MainWindow::gammaDialogShow()
 {
-    gammaCorrectionDialog->show();
     int result = gammaCorrectionDialog->exec();
+    if (result)
+    {
+        if (selection == 0)
+        {
+            *image = ui->imageView->pixmap()->toImage();
+
+            addEntryToHistory("Гамма коррекция");
+        }
+    }
+    else
+        if (selection == 0)
+            ui->imageView->setPixmap(QPixmap::fromImage(*image));
 }
