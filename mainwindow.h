@@ -69,9 +69,10 @@ private:
     //Выделение
 private:
     void selectionMerging();
-    void selectionPreview();
+    void selectionPreview(QImage *selectionBuffer);
 
     QImage* selection;
+    QImage* selectionBuffer;
 
 private:
     QLayout* historyLayout;
