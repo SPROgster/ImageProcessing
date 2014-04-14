@@ -395,7 +395,7 @@ void MainWindow::selectionPreview()
     QImage buffer(*image);
     QPainter painter(&buffer);
     painter.save();
-    painter.drawImage(0, 0, *selection);
+    painter.drawImage(0, 0, *selectionBuffer);
     painter.restore();
 
     ui->imageView->setPixmap(QPixmap::fromImage(buffer));
