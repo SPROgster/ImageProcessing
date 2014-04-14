@@ -412,7 +412,7 @@ void MainWindow::selectionPreview()
 
 void MainWindow::gammaCorrection(double value)
 {
-    QImage* alphaChannel;
+    QImage* alphaChannel = 0;
     QImage* buffer;
 
     if (selection == 0)
