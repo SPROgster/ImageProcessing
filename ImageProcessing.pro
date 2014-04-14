@@ -15,13 +15,16 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
-    structuralElements.cpp
+    structuralElements.cpp \
+    gammadialog.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
-    structuralElements.h
+    structuralElements.h \
+    gammadialog.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    gammadialog.ui
 
 CONFIG   += static
 

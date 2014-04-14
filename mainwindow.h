@@ -7,6 +7,8 @@
 
 #include "imageentry.h"
 
+class gammaDialog;
+
 namespace Ui {
 class MainWindow;
 }
@@ -75,6 +77,16 @@ private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;
     QList<imageEntry*> historyList;
+
+    //Коррекция гаммы
+private slots:
+    void gammaDialogShow();
+
+private:
+    void gammaCorrection(double value);
+
+    friend class gammaDialog;
+    gammaDialog* gammaCorrectionDialog;
 };
 
 #endif // MAINWINDOW_H

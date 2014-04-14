@@ -246,6 +246,7 @@
     <property name="title">
      <string>Редактировать</string>
     </property>
+    <addaction name="actionGamma"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -340,6 +341,11 @@
   <action name="actionExit">
    <property name="text">
     <string>Выход</string>
+   </property>
+  </action>
+  <action name="actionGamma">
+   <property name="text">
+    <string>Гамма коррекция</string>
    </property>
   </action>
  </widget>

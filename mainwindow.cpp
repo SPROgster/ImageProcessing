@@ -8,6 +8,8 @@
 
 #include "imageentry.h"
 
+#include "gammadialog.h"
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -17,6 +19,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // File
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(menuFileOpen()));
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(menuFileExit()));
+
+    // Edit
+    connect(ui->actionGamma, SIGNAL(triggered()), this, SLOT(gammaDialogShow()));
 
     image = new QImage();
 
@@ -54,10 +59,15 @@ MainWindow::MainWindow(QWidget *parent) :
     historyLayout->addItem(historySpacer);
 
     historyList.clear();
+
+    // Гамма коррекция
+    gammaCorrectionDialog = new gammaDialog(this);
 }
 
 MainWindow::~MainWindow()
 {
+    delete gammaCorrectionDialog;
+
     clearHistory();
 
     if (maskImage != 0)
@@ -401,4 +411,15 @@ void MainWindow::selectionPreview()
     ui->imageView->setPixmap(QPixmap::fromImage(buffer));
 
     repaint();
+}
+
+void MainWindow::gammaCorrection(double value)
+{
+
+}
+
+void MainWindow::gammaDialogShow()
+{
+    gammaCorrectionDialog->show();
+    int result = gammaCorrectionDialog->exec();
 }
