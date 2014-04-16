@@ -57,6 +57,7 @@ void gammaDialog::gammaSpinMoved(double newValue)
 
 void gammaDialog::buttonPressed(QAbstractButton *button_)
 {
-    if (button_ == (QAbstractButton*)ui->buttonBox->button(QDialogButtonBox::Apply))
+    if (button_ == (QAbstractButton*)ui->buttonBox->button(QDialogButtonBox::Apply)
+            || button_ == (QAbstractButton*)ui->buttonBox->button(QDialogButtonBox::Ok))
         parentWindow->gammaCorrection(value);
 }
