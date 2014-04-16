@@ -8,6 +8,7 @@
 #include "imageentry.h"
 
 class gammaDialog;
+class HighBoostDialog;
 
 namespace Ui {
 class MainWindow;
@@ -77,6 +78,16 @@ private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;
     QList<imageEntry*> historyList;
+
+    //Подъем высоких частот
+private slots:
+    void highBoostDialogShow();
+
+private:
+    void highBoostFiltering(double A, bool fullSquare = true);
+
+    friend class HighBoostDialog;
+    HighBoostDialog* highBoostDialog;
 
     //Коррекция гаммы
 private slots:

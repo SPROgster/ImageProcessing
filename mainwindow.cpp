@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Edit
     connect(ui->actionGamma, SIGNAL(triggered()), this, SLOT(gammaDialogShow()));
+    connect(ui->actionHighBoost, SIGNAL(triggered()), this, SLOT(highBoostDialogShow());
 
     image = new QImage();
 
@@ -62,6 +63,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     historyList.clear();
 
+    // Подъем высоких частот
+    highBoostDialog = new HighBoostDialog(this);
+
+    ui->actionHighBoost->setEnabled(false);
+
     // Гамма коррекция
     gammaCorrectionDialog = new gammaDialog(this);
 
@@ -70,6 +76,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    delete highBoostDialog;
     delete gammaCorrectionDialog;
 
     clearHistory();
@@ -323,6 +330,7 @@ void MainWindow::loadImage()
 
 void MainWindow::activateMenu()
 {
+    ui->actionHighBoost->setEnabled(true);
     ui->actionGamma->setEnabled(true);
 
     //Включение панели маски
@@ -408,6 +416,40 @@ void MainWindow::selectionPreview()
     ui->imageView->setPixmap(QPixmap::fromImage(buffer));
 
     repaint();
+}
+
+void MainWindow::highBoostDialogShow()
+{
+    int result = highBoostDialog->exec();
+    if (result)
+    {
+        if (selection == 0)
+        {
+            *image = ui->imageView->pixmap()->toImage();
+
+            addEntryToHistory("Под. высоких частот");
+        }
+        else
+        {
+            *selection = *selectionBuffer;
+        }
+    }
+    else
+        if (selection == 0)
+            ui->imageView->setPixmap(QPixmap::fromImage(*image));
+        else
+        {
+            if (selectionBuffer != 0)
+                delete selectionBuffer;
+
+            selectionBuffer = new QImage(*selection);
+            selectionPreview();
+        }
+}
+
+void MainWindow::highBoostFiltering(double A, bool fullSquare)
+{
+
 }
 
 void MainWindow::gammaCorrection(double value)

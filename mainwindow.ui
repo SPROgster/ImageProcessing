@@ -247,6 +247,7 @@
      <string>Редактировать</string>
     </property>
     <addaction name="actionGamma"/>
+    <addaction name="actionHighBoost"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -346,6 +347,11 @@
   <action name="actionGamma">
    <property name="text">
     <string>Гамма коррекция</string>
+   </property>
+  </action>
+  <action name="actionHighBoost">
+   <property name="text">
+    <string>Подъем высоких частот</string>
    </property>
   </action>
  </widget>

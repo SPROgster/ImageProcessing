@@ -18,15 +18,18 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
     structuralElements.cpp \
-    gammadialog.cpp
+    gammadialog.cpp \
+    highboostdialog.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
-    gammadialog.h
+    gammadialog.h \
+    highboostdialog.h
 
 FORMS    += mainwindow.ui \
-    gammadialog.ui
+    gammadialog.ui \
+    highboostdialog.ui
 
 OTHER_FILES += \
     res/maskButton.bmp
