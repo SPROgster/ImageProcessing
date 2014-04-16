@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     maskCursor = 0;
     maskImage = 0;
+    maskImageAlpha = 0;
 
     ui->maskButton->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
@@ -55,6 +56,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     selection = 0;
     selectionBuffer = 0;
+    selectionAlpha = 0;
 
     // История
     historyLayout = ui->historyAreaContents->layout();
@@ -82,9 +84,14 @@ MainWindow::~MainWindow()
 
     clearHistory();
 
+
+    if (selectionAlpha != 0)
+        delete selectionAlpha;
     if (selectionBuffer != 0)
         delete selectionBuffer;
 
+    if (maskImageAlpha != 0)
+        delete maskImageAlpha;
     if (maskImage != 0)
         delete maskImage;
     if (maskCursor != 0)
@@ -130,18 +137,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
 
-                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
+                QPainter painterAlpha(selectionAlpha);
+                painterAlpha.save();
+                painterAlpha.drawImage(x, y, *maskImageAlpha);
+                painterAlpha.restore();
 
-                for (int maskX = 0; maskX < maskImage->width(); maskX++)
-                    for (int maskY = 0; maskY < maskImage->height(); maskY++)
-                    {
-                        QColor pixelColorMask(maskImage->pixel(maskX, maskY));
-                        if (pixelColorMask.alpha() > 0)
-                        {
-                            QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
-                            selection->setPixel(maskX + x, maskY + y, pixelColorImage.rgba());
-                        }
-                    }
+                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
             }
             else if(event->type() == QEvent::MouseMove)
             {
@@ -158,18 +159,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
 
-                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
+                QPainter painterAlpha(selectionAlpha);
+                painterAlpha.save();
+                painterAlpha.drawImage(x, y, *maskImageAlpha);
+                painterAlpha.restore();
 
-                for (int maskX = 0; maskX < maskImage->width(); maskX++)
-                    for (int maskY = 0; maskY < maskImage->height(); maskY++)
-                    {
-                        QColor pixelColorMask(maskImage->pixel(maskX, maskY));
-                        if (pixelColorMask.alpha() > 0)
-                        {
-                            QColor pixelColorImage(image->pixel(maskX + x, maskY + y));
-                            selection->setPixel(maskX + x, maskY + y, pixelColorImage.rgba());
-                        }
-                    }
+                ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
             }
             else if(event->type() == QEvent::MouseButtonRelease)
             {
@@ -208,6 +203,9 @@ void MainWindow::maskButtonClicked(bool checked)
     if (checked)
     {   
         maskImage = disk(maskValue, QColor(255, 100, 100, 255));
+        maskImageAlpha = disk(maskValue, Qt::white);
+        maskImage->convertToFormat(QImage::Format_Indexed8);
+
         maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
         masking = true;
@@ -221,8 +219,9 @@ void MainWindow::maskButtonClicked(bool checked)
 
         if (maskIsEmpty)
         {
-            selection = new QImage(image->size(), QImage::Format_ARGB32);
-            selection->fill(Qt::transparent);
+            selection = new QImage(*image);
+            selectionAlpha = new QImage(size(), QImage::Format_Indexed8);
+            selectionAlpha->fill(Qt::black);
 
             maskedImage = new QImage(*image);
         }
@@ -235,6 +234,9 @@ void MainWindow::maskButtonClicked(bool checked)
         {
             delete maskImage;
             maskImage = 0;
+
+            delete maskImageAlpha;
+            maskImageAlpha = 0;
         }
         if (maskCursor != 0)
         {
@@ -250,6 +252,7 @@ void MainWindow::maskButtonClicked(bool checked)
         else
         {
             delete selection;
+            delete selectionAlpha;
             delete maskedImage;
         }
         ui->maskSlider->setEnabled(false);
@@ -269,6 +272,7 @@ void MainWindow::maskMergeButtonClicked()
     addEntryToHistory("После маски");
 
     delete selection;
+    delete selectionAlpha;
     delete maskedImage;
 }
 
@@ -278,9 +282,10 @@ void MainWindow::maskCancelButtonClicked()
     ui->maskMergeButton->setEnabled(false);
 
     delete selection;
+    delete selectionAlpha;
     delete maskedImage;
 
-    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+    //ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
     maskIsEmpty = true;
 }
@@ -306,6 +311,7 @@ void MainWindow::loadImage()
     {
         QString fileName = QFileDialog::getOpenFileName(this, "Выберите файл");
         image->load(fileName);
+        image->convertToFormat(QImage::Format_ARGB32);
 
         ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
@@ -343,9 +349,13 @@ void MainWindow::maskValueChanged(int value)
     maskValue = value;
 
     delete maskImage;
+    delete maskImageAlpha;
     delete maskCursor;
 
     maskImage = disk(maskValue, QColor(255, 100, 100, 255));
+    maskImageAlpha = disk(maskValue, Qt::white);
+    maskImageAlpha->convertToFormat(QImage::Format_Indexed8);
+
     maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
     ui->imageView->setCursor(*maskCursor);
@@ -398,6 +408,7 @@ void MainWindow::clearHistory()
 
 void MainWindow::selectionMerging()
 {
+    selection->setAlphaChannel(*selectionAlpha);
     QPainter painter(image);
     painter.save();
     painter.drawImage(0, 0, *selection);
@@ -408,6 +419,7 @@ void MainWindow::selectionMerging()
 
 void MainWindow::selectionPreview()
 {
+    selectionBuffer->setAlphaChannel(selectionAlpha);
     QImage buffer(*image);
     QPainter painter(&buffer);
     painter.save();
