@@ -44,5 +44,5 @@ void HighBoostDialog::buttonPressed(QAbstractButton *button_)
 
     if (button_ == (QAbstractButton*)ui->buttonBox->button(QDialogButtonBox::Apply)
             || button_ == (QAbstractButton*)ui->buttonBox->button(QDialogButtonBox::Ok))
-        parentWindow->highBoostFiltering(value, type);
+        parentWindow->highBoostFiltering(value / 10., type);
 }
