@@ -59,6 +59,7 @@ private:
 
     int maskValue;
     QImage* maskImage;
+    QImage* maskImageAlpha;
     QCursor* maskCursor;
 
     QImage* maskedImage;
@@ -70,6 +71,7 @@ private:
 
     QImage* selection;
     QImage* selectionBuffer;
+    QImage* selectionAlpha;
 
 private:
     QLayout* historyLayout;
