@@ -469,30 +469,39 @@ void MainWindow::highBoostDialogShow()
 
 void MainWindow::highBoostFiltering(double A, bool fullSquare)
 {
-    QImage* buffer;
+    QImage* origin;
 
     if (selection == 0)
-        buffer = new QImage(*image);
+        origin = image;
     else
-        buffer = new QImage(*selection);
+        origin = selection;
 
-    QRgb R, G, B;
-    QRgb *y1, *y2, *y3;
+    QImage* buffer = new QImage(*origin);
+
+    QRgb R, G, B,
+         *y1, *y2, *y3,
+         *yOut;
 
     if (fullSquare)
     {
         for (int y = 1; y < buffer->height() - 1; y++)
         {
 
-            y1 = (QRgb*)buffer->scanLine(y - 1);
-            y2 = (QRgb*)buffer->scanLine(y    );
-            y3 = (QRgb*)buffer->scanLine(y + 1);
+            y1 = (QRgb*)origin->scanLine(y - 1);
+            y2 = (QRgb*)origin->scanLine(y    );
+            y3 = (QRgb*)origin->scanLine(y + 1);
+
+            yOut = (QRgb*)buffer->scanLine(y);
 
             y1++;
             y2++;
             y3++;
 
-            for (int x = 1; x < buffer->width() - 1; x++, y1++, y2++, y3++)
+            yOut++;
+
+            for (int x = 1; x < buffer->width() - 1; x++,
+                                                     y1++, y2++, y3++,
+                                                     yOut++)
             {
                 R = + (int)((A + 8.)     *   (*(y2 + 0) & 0xFF0000))
                     -(*(y1 - 1) & 0xFF0000) -(*(y1 + 0) & 0xFF0000) -(*(y1 + 1) & 0xFF0000)
@@ -530,7 +539,7 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 else
                             B &=0x0000FF;
 
-                *y2 = R + G + B + 0xFF000000;
+                *yOut = R + G + B + 0xFF000000;
             }
         }
     }
@@ -539,15 +548,21 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
         for (int y = 1; y < buffer->height() - 1; y++)
         {
 
-            y1 = (QRgb*)buffer->scanLine(y - 1);
-            y2 = (QRgb*)buffer->scanLine(y    );
-            y3 = (QRgb*)buffer->scanLine(y + 1);
+            y1 = (QRgb*)origin->scanLine(y - 1);
+            y2 = (QRgb*)origin->scanLine(y    );
+            y3 = (QRgb*)origin->scanLine(y + 1);
+
+            yOut = (QRgb*)buffer->scanLine(y);
 
             y1++;
             y2++;
             y3++;
 
-            for (int x = 1; x < buffer->width() - 1; x++, y1++, y2++, y3++)
+            yOut++;
+
+            for (int x = 1; x < buffer->width() - 1; x++,
+                                                     y1++, y2++, y3++,
+                                                     yOut++)
             {
                 R = + (int)((A + 4.)     *   (*(y2 + 0) & 0xFF0000))
                                             -(*(y1 + 0) & 0xFF0000)
@@ -585,7 +600,7 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 else
                             B &=0x0000FF;
 
-                *y2 = R + G + B + 0xFF000000;
+                *yOut = R + G + B + 0xFF000000;
             }
         }
     }
