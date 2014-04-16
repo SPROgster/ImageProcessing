@@ -474,16 +474,12 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
 
 void MainWindow::gammaCorrection(double value)
 {
-    QImage* alphaChannel = 0;
     QImage* buffer;
 
     if (selection == 0)
         buffer = new QImage(*image);
     else
-    {
         buffer = new QImage(*selection);
-        alphaChannel = new QImage(selection->alphaChannel());
-    }
 
     for (int x = 0; x < buffer->width(); x++)
         for (int y = 0; y < buffer->height(); y++)
@@ -508,10 +504,8 @@ void MainWindow::gammaCorrection(double value)
             delete selectionBuffer;
         selectionBuffer = new QImage(*buffer);
 
-        selectionBuffer->setAlphaChannel(*alphaChannel);
         selectionPreview();
 
-        delete alphaChannel;
     }
     delete buffer;
 }
