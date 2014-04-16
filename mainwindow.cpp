@@ -182,7 +182,6 @@ void MainWindow::maskButtonClicked(bool checked)
     {   
         maskImage = disk(maskValue, QColor(255, 100, 100, 255));
         maskImageAlpha = disk(maskValue, Qt::white);
-        maskImage->convertToFormat(QImage::Format_Indexed8);
 
         maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
@@ -198,7 +197,7 @@ void MainWindow::maskButtonClicked(bool checked)
         if (maskIsEmpty)
         {
             selection = new QImage(*image);
-            selectionAlpha = new QImage(size(), QImage::Format_Indexed8);
+            selectionAlpha = new QImage(image->size(), QImage::Format_RGB32);
             selectionAlpha->fill(Qt::black);
 
             maskedImage = new QImage(*image);
@@ -232,6 +231,9 @@ void MainWindow::maskButtonClicked(bool checked)
             delete selection;
             delete selectionAlpha;
             delete maskedImage;
+            selection = 0;
+            selectionAlpha = 0;
+            maskedImage = 0;
         }
         ui->maskSlider->setEnabled(false);
         ui->maskSpin->setEnabled(false);
@@ -252,6 +254,9 @@ void MainWindow::maskMergeButtonClicked()
     delete selection;
     delete selectionAlpha;
     delete maskedImage;
+    selection = 0;
+    selectionAlpha = 0;
+    maskedImage = 0;
 }
 
 void MainWindow::maskCancelButtonClicked()
@@ -262,6 +267,9 @@ void MainWindow::maskCancelButtonClicked()
     delete selection;
     delete selectionAlpha;
     delete maskedImage;
+    selection = 0;
+    selectionAlpha = 0;
+    maskedImage = 0;
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
@@ -329,7 +337,6 @@ void MainWindow::maskValueChanged(int value)
 
     maskImage = disk(maskValue, QColor(255, 100, 100, 255));
     maskImageAlpha = disk(maskValue, Qt::white);
-    maskImageAlpha->convertToFormat(QImage::Format_Indexed8);
 
     maskCursor = new QCursor(QPixmap::fromImage(*maskImage));
 
