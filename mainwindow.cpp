@@ -11,6 +11,7 @@
 #include "imageentry.h"
 
 #include "gammadialog.h"
+#include "highboostdialog.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -24,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Edit
     connect(ui->actionGamma, SIGNAL(triggered()), this, SLOT(gammaDialogShow()));
-    connect(ui->actionHighBoost, SIGNAL(triggered()), this, SLOT(highBoostDialogShow());
+    connect(ui->actionHighBoost, SIGNAL(triggered()), this, SLOT(highBoostDialogShow()));
 
     image = new QImage();
 

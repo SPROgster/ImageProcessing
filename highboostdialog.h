@@ -2,6 +2,9 @@
 #define HIGHBOOSTDIALOG_H
 
 #include <QDialog>
+#include <QAbstractButton>
+
+#include "mainwindow.h"
 
 namespace Ui {
 class HighBoostDialog;
@@ -17,6 +20,16 @@ public:
 
 private:
     Ui::HighBoostDialog *ui;
+    MainWindow* parentWindow;
+
+private slots:
+    void spinMoved(double newValue);
+    void sliderMoved(int newValue);
+    void buttonPressed(QAbstractButton *button_);
+
+private:
+    int value;
+
 };
 
 #endif // HIGHBOOSTDIALOG_H
