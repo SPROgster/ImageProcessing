@@ -469,7 +469,142 @@ void MainWindow::highBoostDialogShow()
 
 void MainWindow::highBoostFiltering(double A, bool fullSquare)
 {
+    QImage* buffer;
 
+    if (selection == 0)
+        buffer = new QImage(*image);
+    else
+        buffer = new QImage(*selection);
+
+    QRgb R, G, B;
+    QRgb *y1, *y2, *y3;
+
+    if (fullSquare)
+    {
+        for (int y = 1; y < buffer->height() - 1; y++)
+        {
+
+            y1 = (QRgb*)buffer->scanLine(y - 1);
+            y2 = (QRgb*)buffer->scanLine(y    );
+            y3 = (QRgb*)buffer->scanLine(y + 1);
+
+            y1++;
+            y2++;
+            y3++;
+
+            for (int x = 1; x < buffer->width() - 1; x++, y1++, y2++, y3++)
+            {
+                R = + (int)((A + 8.)     *   (*(y2 + 0) & 0xFF0000))
+                    -(*(y1 - 1) & 0xFF0000) -(*(y1 + 0) & 0xFF0000) -(*(y1 + 1) & 0xFF0000)
+                    -(*(y2 - 1) & 0xFF0000)                         -(*(y2 + 1) & 0xFF0000)
+                    -(*(y3 - 1) & 0xFF0000) -(*(y3 + 0) & 0xFF0000) -(*(y3 + 1) & 0xFF0000);
+
+                G = + (int)((A + 8.)     *   (*(y2 + 0) & 0x00FF00))
+                    -(*(y1 - 1) & 0x00FF00) -(*(y1 + 0) & 0x00FF00) -(*(y1 + 1) & 0x00FF00)
+                    -(*(y2 - 1) & 0x00FF00)                         -(*(y2 + 1) & 0x00FF00)
+                    -(*(y3 - 1) & 0x00FF00) -(*(y3 + 0) & 0x00FF00) -(*(y3 + 1) & 0x00FF00);
+
+                B = + (int)((A + 8.)     *   (*(y2 + 0) & 0x0000FF))
+                    -(*(y1 - 1) & 0x0000FF) -(*(y1 + 0) & 0x0000FF) -(*(y1 + 1) & 0x0000FF)
+                    -(*(y2 - 1) & 0x0000FF)                         -(*(y2 + 1) & 0x0000FF)
+                    -(*(y3 - 1) & 0x0000FF) -(*(y3 + 0) & 0x0000FF) -(*(y3 + 1) & 0x0000FF);
+
+                if      (R > 0x7FFFFFFF)
+                            R = 0x000000;
+                else if (R > 0x00FFFFFF)
+                            R = 0xFF0000;
+                else
+                            R &=0xFF0000;
+
+                if      (G > 0x7FFFFFFF)
+                            G = 0x000000;
+                else if (G > 0x00FFFFFF)
+                            G = 0x00FF00;
+                else
+                            G &=0x00FF00;
+
+                if      (B > 0x7FFFFFFF)
+                            B = 0x000000;
+                else if (B > 0x00FFFFFF)
+                            B = 0x0000FF;
+                else
+                            B &=0x0000FF;
+
+                *y2 = R + G + B + 0xFF000000;
+            }
+        }
+    }
+    else
+    {
+        for (int y = 1; y < buffer->height() - 1; y++)
+        {
+
+            y1 = (QRgb*)buffer->scanLine(y - 1);
+            y2 = (QRgb*)buffer->scanLine(y    );
+            y3 = (QRgb*)buffer->scanLine(y + 1);
+
+            y1++;
+            y2++;
+            y3++;
+
+            for (int x = 1; x < buffer->width() - 1; x++, y1++, y2++, y3++)
+            {
+                R = + (int)((A + 4.)     *   (*(y2 + 0) & 0xFF0000))
+                                            -(*(y1 + 0) & 0xFF0000)
+                    -(*(y2 - 1) & 0xFF0000)                         -(*(y2 + 1) & 0xFF0000)
+                                            -(*(y3 + 0) & 0xFF0000)                        ;
+
+                G = + (int)((A + 4.)     *   (*(y2 + 0) & 0x00FF00))
+                                            -(*(y1 + 0) & 0x00FF00)
+                    -(*(y2 - 1) & 0x00FF00)                         -(*(y2 + 1) & 0x00FF00)
+                                            -(*(y3 + 0) & 0x00FF00)                        ;
+
+                B = + (int)((A + 4.)     *   (*(y2 + 0) & 0x0000FF))
+                                            -(*(y1 + 0) & 0x0000FF)
+                    -(*(y2 - 1) & 0x0000FF)                         -(*(y2 + 1) & 0x0000FF)
+                                            -(*(y3 + 0) & 0x0000FF)                        ;
+
+                if      (R > 0x7FFFFFFF)
+                            R = 0x000000;
+                else if (R > 0x00FFFFFF)
+                            R = 0xFF0000;
+                else
+                            R &=0xFF0000;
+
+                if      (G > 0x7FFFFFFF)
+                            G = 0x000000;
+                else if (G > 0x00FFFFFF)
+                            G = 0x00FF00;
+                else
+                            G &=0x00FF00;
+
+                if      (B > 0x7FFFFFFF)
+                            B = 0x000000;
+                else if (B > 0x00FFFFFF)
+                            B = 0x0000FF;
+                else
+                            B &=0x0000FF;
+
+                *y2 = R + G + B + 0xFF000000;
+            }
+        }
+    }
+
+    if (selection == 0)
+    {
+        ui->imageView->setPixmap(QPixmap::fromImage(*buffer));
+        repaint();
+    }
+    else
+    {
+        if (selectionBuffer != 0)
+            delete selectionBuffer;
+        selectionBuffer = new QImage(*buffer);
+
+        selectionPreview();
+
+    }
+    delete buffer;
 }
 
 void MainWindow::gammaCorrection(double value)
