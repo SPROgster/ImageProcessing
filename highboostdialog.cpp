@@ -12,6 +12,8 @@ HighBoostDialog::HighBoostDialog(QWidget *parent) :
 
     connect(ui->coeffSlider, SIGNAL(sliderMoved(int)), this, SLOT(sliderMoved(int)));
     connect(ui->coeffSpin, SIGNAL(valueChanged(double)), this, SLOT(spinMoved(double)));
+
+    connect(ui->buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(buttonPressed(QAbstractButton*)));
 }
 
 HighBoostDialog::~HighBoostDialog()
