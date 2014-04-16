@@ -285,7 +285,7 @@ void MainWindow::maskCancelButtonClicked()
     delete selectionAlpha;
     delete maskedImage;
 
-    //ui->imageView->setPixmap(QPixmap::fromImage(*image));
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
     maskIsEmpty = true;
 }
@@ -419,7 +419,7 @@ void MainWindow::selectionMerging()
 
 void MainWindow::selectionPreview()
 {
-    selectionBuffer->setAlphaChannel(selectionAlpha);
+    selectionBuffer->setAlphaChannel(*selectionAlpha);
     QImage buffer(*image);
     QPainter painter(&buffer);
     painter.save();
