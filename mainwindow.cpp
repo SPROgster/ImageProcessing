@@ -74,18 +74,12 @@ MainWindow::~MainWindow()
 
     clearHistory();
 
+    DeleteIfNotNull(selectionAlpha);
+    DeleteIfNotNull(selectionBuffer);
 
-    if (selectionAlpha != 0)
-        delete selectionAlpha;
-    if (selectionBuffer != 0)
-        delete selectionBuffer;
-
-    if (maskImageAlpha != 0)
-        delete maskImageAlpha;
-    if (maskImage != 0)
-        delete maskImage;
-    if (maskCursor != 0)
-        delete maskCursor;
+    DeleteIfNotNull(maskImageAlpha);
+    DeleteIfNotNull(maskImage);
+    DeleteIfNotNull(maskCursor);
 
     delete image;
     delete ui;
@@ -535,8 +529,7 @@ void MainWindow::curveChanged()
     }
     else
     {
-        if (selectionBuffer)
-            delete selectionBuffer;
+        DeleteIfNotNull(selectionBuffer)
 
         selectionBuffer = buffer;
         selectionPreview();
