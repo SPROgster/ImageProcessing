@@ -528,7 +528,11 @@ void MainWindow::curveChanged()
         }
 
     if (selection == 0)
+    {
         ui->imageView->setPixmap(QPixmap::fromImage(*buffer));
+
+        delete buffer;
+    }
     else
     {
         if (selectionBuffer)
@@ -537,8 +541,6 @@ void MainWindow::curveChanged()
         selectionBuffer = buffer;
         selectionPreview();
     }
-
-    delete buffer;
 }
 
 void MainWindow::addEntryToHistory(const QString &text, int index)
