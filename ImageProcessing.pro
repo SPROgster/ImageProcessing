@@ -16,16 +16,22 @@ CONFIG += static
 SOURCES += main.cpp\
     mainwindow.cpp \
     imageentry.cpp \
-    coindialog.cpp \
+    structuralElements.cpp \
     morphology.cpp \
-    structuralElements.cpp
+    coindialog.cpp
+
 
 HEADERS  += mainwindow.h \
     imageentry.h \
-    coindialog.h \
+    structuralElements.h \
     morphology.h \
-    structuralElements.h
+    coindialog.h
+
 
 FORMS    += mainwindow.ui \
     coindialog.ui
 
+OTHER_FILES += \
+    res/maskButton.bmp
+
+RESOURCES +=
