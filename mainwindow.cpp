@@ -145,10 +145,9 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
             }
-            else if(event->type() == QEvent::MouseMove)
+            else if(event->type() == QEvent::MouseMove && maskingDrawing)
             {
-                if (maskingDrawing)
-                    maskIsEmpty = false;
+                maskIsEmpty = false;
 
                 QMouseEvent* mouseEvent = (QMouseEvent*)event;
 
