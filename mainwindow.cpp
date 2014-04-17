@@ -121,12 +121,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
         if (event->type() == QEvent::Close)
         {
-            *image = (QImage)(ui->imageView->pixmap()->toImage());
+            curveChanged();
+
             if (selection == 0)
+            {
+                *image = (QImage)(ui->imageView->pixmap()->toImage());
+
                 addEntryToHistory("Кривая яркости");
+            }
             else
             {
-                selectionMerging();
+                DeleteIfNotNull(selection);
+
+                selection = selectionBuffer;
             }
 
             delete curveWindow;
