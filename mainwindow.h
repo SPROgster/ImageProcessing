@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#define DeleteIfNotNull(x) if (x != 0) { delete x; x = 0; }
+
 #include <QList>
 #include <QMainWindow>
 #include <QSpacerItem>
