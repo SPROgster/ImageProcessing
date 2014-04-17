@@ -509,14 +509,10 @@ void MainWindow::showCurveWindow()
 void MainWindow::curveChanged()
 {
     QImage* buffer;
-    QImage alphaChannel;
     if (selection == 0)
         buffer = new QImage(*image);
     else
-    {
         buffer = new QImage(*selection);
-        alphaChannel = selection->alphaChannel();
-    }
 
     KisCubicCurve curve = curveWindow->curve();
 
@@ -525,25 +521,21 @@ void MainWindow::curveChanged()
         {
             QColor pixelColor(buffer->pixel(x, y));
 
-            int alpha = pixelColor.alpha();
+            pixelColor.setHslF(pixelColor.hueF(),
+                               pixelColor.saturationF(),
+                               curve.value(pixelColor.valueF()));
 
-            if (alpha > 0)
-            {
-                pixelColor.setHslF(pixelColor.hueF(),
-                                   pixelColor.saturationF(),
-                                   curve.value(pixelColor.valueF()));
-                pixelColor.setAlpha(alpha);
-
-                buffer->setPixel(x, y, pixelColor.rgba());
-            }
+            buffer->setPixel(x, y, pixelColor.rgb());
         }
 
     if (selection == 0)
         ui->imageView->setPixmap(QPixmap::fromImage(*buffer));
     else
     {
-        *selection = *buffer;
-        selection->setAlphaChannel(alphaChannel);
+        if (selectionBuffer)
+            delete selectionBuffer;
+
+        selectionBuffer = buffer;
         selectionPreview();
     }
 
