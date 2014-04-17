@@ -75,8 +75,8 @@ private:
     bool maskIsEmpty;
 
     int maskValue;
-    QImage* maskCursorImage;
     QImage* maskImage;
+    QImage* maskImageAlpha;
     QCursor* maskCursor;
 
     QImage* maskedImage;
@@ -87,6 +87,8 @@ private:
     void selectionPreview();
 
     QImage* selection;
+    QImage* selectionBuffer;
+    QImage* selectionAlpha;
 
 private:
     QLayout* historyLayout;
