@@ -118,7 +118,7 @@
           </property>
           <property name="icon">
            <iconset>
-            <normalon>res/maskButton.bmp</normalon>
+            <normalon>:/rootIco/res/maskButton.ico</normalon>
            </iconset>
           </property>
           <property name="checkable">

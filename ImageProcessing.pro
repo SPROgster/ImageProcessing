@@ -30,7 +30,7 @@ FORMS    += mainwindow.ui
 
 CONFIG   += static
 
-OTHER_FILES += \
-    res/maskButton.bmp
+OTHER_FILES +=
 
-RESOURCES +=
+RESOURCES += \
+    ico.qrc
