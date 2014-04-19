@@ -547,13 +547,13 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 currGf = (A + 8.) * currG - maskG;
                 currBf = (A + 8.) * currB - maskB;
 
-                if (currRf > max) max = currR;
-                if (currGf > max) max = currG;
-                if (currBf > max) max = currB;
+                if (currRf > max) max = currRf;
+                if (currGf > max) max = currGf;
+                if (currBf > max) max = currBf;
 
-                if (currRf < min) min = currR;
-                if (currGf < min) min = currG;
-                if (currBf < min) min = currB;
+                if (currRf < min) min = currRf;
+                if (currGf < min) min = currGf;
+                if (currBf < min) min = currBf;
 
                 *outR = currRf;
                 *outG = currGf;
@@ -608,13 +608,13 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 currGf = (A + 4.) * currG - maskG;
                 currBf = (A + 4.) * currB - maskB;
 
-                if (currRf > max) max = currR;
-                if (currGf > max) max = currG;
-                if (currBf > max) max = currB;
+                if (currRf > max) max = currRf;
+                if (currGf > max) max = currGf;
+                if (currBf > max) max = currBf;
 
-                if (currRf < min) min = currR;
-                if (currGf < min) min = currG;
-                if (currBf < min) min = currB;
+                if (currRf < min) min = currRf;
+                if (currGf < min) min = currGf;
+                if (currBf < min) min = currBf;
 
                 *outR = currRf;
                 *outG = currGf;
@@ -641,7 +641,7 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
             currG = (int)( (*outG - min) * mulCoef) + origMin;
             currB = (int)( (*outB - min) * mulCoef) + origMin;
 
-            *yOut = currR << 16 + currG << 8 + currB;
+            *yOut = (currR << 16) + (currG << 8) + currB;
         }
     }
 
