@@ -477,9 +477,28 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
 
     QImage* buffer = new QImage(*origin);
 
-    QRgb R, G, B,
-         *y1, *y2, *y3,
+    QRgb *y1, *y2, *y3,
          *yOut;
+
+    int currR, currG, currB,
+        origMin, origMax,
+        maskR, maskG, maskB;
+
+    int maskSize = (buffer->width() - 2) * (buffer->height() - 2);
+
+    float min, max,
+          currRf, currGf, currBf;
+
+    float *outR, *outG, *outB,
+          *R = outR = new float[maskSize],
+          *G = outG = new float[maskSize],
+          *B = outB = new float[maskSize];
+
+    origMin = 255;
+    origMax = 0;
+
+    min =  10000000;
+    max = -10000000;
 
     if (fullSquare)
     {
@@ -490,55 +509,55 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
             y2 = (QRgb*)origin->scanLine(y    );
             y3 = (QRgb*)origin->scanLine(y + 1);
 
-            yOut = (QRgb*)buffer->scanLine(y);
-
             y1++;
             y2++;
             y3++;
 
-            yOut++;
-
             for (int x = 1; x < buffer->width() - 1; x++,
                                                      y1++, y2++, y3++,
-                                                     yOut++)
+                                                     outR++, outG++, outB++)
             {
-                R = + (int)((A + 8.)     *   (*(y2 + 0) & 0xFF0000))
-                    -(*(y1 - 1) & 0xFF0000) -(*(y1 + 0) & 0xFF0000) -(*(y1 + 1) & 0xFF0000)
-                    -(*(y2 - 1) & 0xFF0000)                         -(*(y2 + 1) & 0xFF0000)
-                    -(*(y3 - 1) & 0xFF0000) -(*(y3 + 0) & 0xFF0000) -(*(y3 + 1) & 0xFF0000);
+                maskR =((*(y1 - 1) & 0xFF0000) + (*(y1 + 0) & 0xFF0000) + (*(y1 + 1) & 0xFF0000) +
+                        (*(y2 - 1) & 0xFF0000)                          + (*(y2 + 1) & 0xFF0000) +
+                        (*(y3 - 1) & 0xFF0000) + (*(y3 + 0) & 0xFF0000) + (*(y3 + 1) & 0xFF0000) )
+                        >> 16;
 
-                G = + (int)((A + 8.)     *   (*(y2 + 0) & 0x00FF00))
-                    -(*(y1 - 1) & 0x00FF00) -(*(y1 + 0) & 0x00FF00) -(*(y1 + 1) & 0x00FF00)
-                    -(*(y2 - 1) & 0x00FF00)                         -(*(y2 + 1) & 0x00FF00)
-                    -(*(y3 - 1) & 0x00FF00) -(*(y3 + 0) & 0x00FF00) -(*(y3 + 1) & 0x00FF00);
+                maskG =((*(y1 - 1) & 0x00FF00) + (*(y1 + 0) & 0x00FF00) + (*(y1 + 1) & 0x00FF00) +
+                        (*(y2 - 1) & 0x00FF00)                          + (*(y2 + 1) & 0x00FF00) +
+                        (*(y3 - 1) & 0x00FF00) + (*(y3 + 0) & 0x00FF00) + (*(y3 + 1) & 0x00FF00))
+                        >> 8;
 
-                B = + (int)((A + 8.)     *   (*(y2 + 0) & 0x0000FF))
-                    -(*(y1 - 1) & 0x0000FF) -(*(y1 + 0) & 0x0000FF) -(*(y1 + 1) & 0x0000FF)
-                    -(*(y2 - 1) & 0x0000FF)                         -(*(y2 + 1) & 0x0000FF)
-                    -(*(y3 - 1) & 0x0000FF) -(*(y3 + 0) & 0x0000FF) -(*(y3 + 1) & 0x0000FF);
+                maskB = (*(y1 - 1) & 0x0000FF) + (*(y1 + 0) & 0x0000FF) + (*(y1 + 1) & 0x0000FF) +
+                        (*(y2 - 1) & 0x0000FF)                          + (*(y2 + 1) & 0x0000FF) +
+                        (*(y3 - 1) & 0x0000FF) + (*(y3 + 0) & 0x0000FF) + (*(y3 + 1) & 0x0000FF);
 
-                if      (R > 0x7FFFFFFF)
-                            R = 0x000000;
-                else if (R > 0x00FFFFFF)
-                            R = 0xFF0000;
-                else
-                            R &=0xFF0000;
+                currR = (*y2 & 0xFF0000) >> 16;
+                currG = (*y2 & 0x00FF00) >> 8;
+                currB =  *y2 & 0x0000FF;
 
-                if      (G > 0x7FFFFFFF)
-                            G = 0x000000;
-                else if (G > 0x00FFFFFF)
-                            G = 0x00FF00;
-                else
-                            G &=0x00FF00;
+                if (currR > origMax) origMax = currR;
+                if (currG > origMax) origMax = currG;
+                if (currB > origMax) origMax = currB;
 
-                if      (B > 0x7FFFFFFF)
-                            B = 0x000000;
-                else if (B > 0x00FFFFFF)
-                            B = 0x0000FF;
-                else
-                            B &=0x0000FF;
+                if (currR < origMin) origMin = currR;
+                if (currG < origMin) origMin = currG;
+                if (currB < origMin) origMin = currB;
 
-                *yOut = R + G + B + 0xFF000000;
+                currRf = (A + 8.) * currR - maskR;
+                currGf = (A + 8.) * currG - maskG;
+                currBf = (A + 8.) * currB - maskB;
+
+                if (currRf > max) max = currR;
+                if (currGf > max) max = currG;
+                if (currBf > max) max = currB;
+
+                if (currRf < min) min = currR;
+                if (currGf < min) min = currG;
+                if (currBf < min) min = currB;
+
+                *outR = currRf;
+                *outG = currGf;
+                *outB = currBf;
             }
         }
     }
@@ -551,55 +570,55 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
             y2 = (QRgb*)origin->scanLine(y    );
             y3 = (QRgb*)origin->scanLine(y + 1);
 
-            yOut = (QRgb*)buffer->scanLine(y);
-
             y1++;
             y2++;
             y3++;
 
-            yOut++;
-
             for (int x = 1; x < buffer->width() - 1; x++,
                                                      y1++, y2++, y3++,
-                                                     yOut++)
+                                                     outR++, outG++, outB++)
             {
-                R = + (int)((A + 4.)     *   (*(y2 + 0) & 0xFF0000))
-                                            -(*(y1 + 0) & 0xFF0000)
-                    -(*(y2 - 1) & 0xFF0000)                         -(*(y2 + 1) & 0xFF0000)
-                                            -(*(y3 + 0) & 0xFF0000)                        ;
+                maskR =(                         (*(y1 + 0) & 0xFF0000)                          +
+                        (*(y2 - 1) & 0xFF0000)                          + (*(y2 + 1) & 0xFF0000) +
+                                                 (*(y3 + 0) & 0xFF0000)                          )
+                        >> 16;
 
-                G = + (int)((A + 4.)     *   (*(y2 + 0) & 0x00FF00))
-                                            -(*(y1 + 0) & 0x00FF00)
-                    -(*(y2 - 1) & 0x00FF00)                         -(*(y2 + 1) & 0x00FF00)
-                                            -(*(y3 + 0) & 0x00FF00)                        ;
+                maskG =(                         (*(y1 + 0) & 0x00FF00)                          +
+                        (*(y2 - 1) & 0x00FF00)                          + (*(y2 + 1) & 0x00FF00) +
+                                                 (*(y3 + 0) & 0x00FF00)                         )
+                        >> 8;
 
-                B = + (int)((A + 4.)     *   (*(y2 + 0) & 0x0000FF))
-                                            -(*(y1 + 0) & 0x0000FF)
-                    -(*(y2 - 1) & 0x0000FF)                         -(*(y2 + 1) & 0x0000FF)
-                                            -(*(y3 + 0) & 0x0000FF)                        ;
+                maskB =                          (*(y1 + 0) & 0x0000FF)                          +
+                        (*(y2 - 1) & 0x0000FF)                          + (*(y2 + 1) & 0x0000FF) +
+                                                 (*(y3 + 0) & 0x0000FF)                         ;
 
-                if      (R > 0x7FFFFFFF)
-                            R = 0x000000;
-                else if (R > 0x00FFFFFF)
-                            R = 0xFF0000;
-                else
-                            R &=0xFF0000;
+                currR = (*y2 & 0xFF0000) >> 16;
+                currG = (*y2 & 0x00FF00) >> 8;
+                currB =  *y2 & 0x0000FF;
 
-                if      (G > 0x7FFFFFFF)
-                            G = 0x000000;
-                else if (G > 0x00FFFFFF)
-                            G = 0x00FF00;
-                else
-                            G &=0x00FF00;
+                if (currR > origMax) origMax = currR;
+                if (currG > origMax) origMax = currG;
+                if (currB > origMax) origMax = currB;
 
-                if      (B > 0x7FFFFFFF)
-                            B = 0x000000;
-                else if (B > 0x00FFFFFF)
-                            B = 0x0000FF;
-                else
-                            B &=0x0000FF;
+                if (currR < origMin) origMin = currR;
+                if (currG < origMin) origMin = currG;
+                if (currB < origMin) origMin = currB;
 
-                *yOut = R + G + B + 0xFF000000;
+                currRf = (A + 4.) * currR - maskR;
+                currGf = (A + 4.) * currG - maskG;
+                currBf = (A + 4.) * currB - maskB;
+
+                if (currRf > max) max = currR;
+                if (currGf > max) max = currG;
+                if (currBf > max) max = currB;
+
+                if (currRf < min) min = currR;
+                if (currGf < min) min = currG;
+                if (currBf < min) min = currB;
+
+                *outR = currRf;
+                *outG = currGf;
+                *outB = currBf;
             }
         }
     }
@@ -618,6 +637,8 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
         selectionPreview();
 
     }
+
+    delete [] R; delete [] G; delete [] B;
     delete buffer;
 }
 
