@@ -31,7 +31,7 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui \
     coindialog.ui
 
-OTHER_FILES += \
-    res/maskButton.bmp
+OTHER_FILES +=
 
-RESOURCES +=
+RESOURCES += \
+    ico.qrc
