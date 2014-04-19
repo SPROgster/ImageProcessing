@@ -31,7 +31,7 @@ FORMS    += mainwindow.ui \
     gammadialog.ui \
     highboostdialog.ui
 
-OTHER_FILES += \
-    res/maskButton.bmp
+OTHER_FILES +=
 
-RESOURCES +=
+RESOURCES += \
+    ico.qrc
