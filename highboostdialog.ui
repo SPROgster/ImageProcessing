@@ -67,7 +67,7 @@
       <item>
        <widget class="QSlider" name="coeffSlider">
         <property name="maximum">
-         <number>20</number>
+         <number>40</number>
         </property>
         <property name="pageStep">
          <number>1</number>
@@ -83,7 +83,7 @@
          <number>1</number>
         </property>
         <property name="maximum">
-         <double>2.000000000000000</double>
+         <double>4.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>0.100000000000000</double>
