@@ -543,9 +543,9 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 if (currG < origMin) origMin = currG;
                 if (currB < origMin) origMin = currB;
 
-                currRf = (A + 8.) * currR - maskR;
-                currGf = (A + 8.) * currG - maskG;
-                currBf = (A + 8.) * currB - maskB;
+                currRf = (A + 8.) * (float)currR - (float)maskR;
+                currGf = (A + 8.) * (float)currG - (float)maskG;
+                currBf = (A + 8.) * (float)currB - (float)maskB;
 
                 if (currRf > max) max = currRf;
                 if (currGf > max) max = currGf;
@@ -604,9 +604,9 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
                 if (currG < origMin) origMin = currG;
                 if (currB < origMin) origMin = currB;
 
-                currRf = (A + 4.) * currR - maskR;
-                currGf = (A + 4.) * currG - maskG;
-                currBf = (A + 4.) * currB - maskB;
+                currRf = (A + 4.) * (float)currR - (float)maskR;
+                currGf = (A + 4.) * (float)currG - (float)maskG;
+                currBf = (A + 4.) * (float)currB - (float)maskB;
 
                 if (currRf > max) max = currRf;
                 if (currGf > max) max = currGf;
