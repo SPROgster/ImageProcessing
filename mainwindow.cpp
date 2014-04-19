@@ -623,6 +623,28 @@ void MainWindow::highBoostFiltering(double A, bool fullSquare)
         }
     }
 
+    outR = R; outG = G; outB = B;
+
+    float mulCoef = (origMax - origMin) / (max - min);
+
+    for (int y = 1; y < buffer->height() - 1; y++)
+    {
+        yOut = (QRgb*)buffer->scanLine(y);
+
+        yOut++;
+
+        for (int x = 1; x < buffer->width() - 1; x++,
+                                                 yOut++,
+                                                 outR++, outG++, outB++)
+        {
+            currR = (int)( (*outR - min) * mulCoef) + origMin;
+            currG = (int)( (*outG - min) * mulCoef) + origMin;
+            currB = (int)( (*outB - min) * mulCoef) + origMin;
+
+            *yOut = currR << 16 + currG << 8 + currB;
+        }
+    }
+
     if (selection == 0)
     {
         ui->imageView->setPixmap(QPixmap::fromImage(*buffer));
