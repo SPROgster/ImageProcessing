@@ -75,6 +75,9 @@ private:
     QImage* selectionBuffer;
     QImage* selectionAlpha;
 
+    // Гистограмма
+    long* computeHistogramRGB();
+
 private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;

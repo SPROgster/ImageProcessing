@@ -405,3 +405,33 @@ void MainWindow::selectionPreview()
 
     repaint();
 }
+
+//
+// Вычисление гистограмы
+//
+long *MainWindow::computeHistogramRGB()
+{
+    QColor pixelColor;
+
+    // +2 для min и max
+    long *histogram = new long [256 + 2],
+        &min = histogram[256],
+        &max = histogram[257],
+        currentValue;
+
+    memset(histogram, 0, (sizeof(long))*(256 + 2));
+
+    for(int x = 0; x < image->width(); x++)
+        for(int y = 0; y < image->height(); y++)
+        {
+            pixelColor.setRgb(image->pixel(x, y));
+            currentValue = pixelColor.value();
+
+            histogram[currentValue]++;
+
+            if (currentValue > max) max = currentValue;
+            if (currentValue < min) min = currentValue;
+        }
+
+    return histogram;
+}
