@@ -15,11 +15,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
-    structuralElements.cpp
+    structuralElements.cpp \
+    progressiveCut.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
-    structuralElements.h
+    structuralElements.h \
+    progressiveCut.h
 
 FORMS    += mainwindow.ui
 
