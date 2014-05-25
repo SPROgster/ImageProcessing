@@ -15,11 +15,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
-    structuralElements.cpp
+    structuralElements.cpp \
+    drainageDevide.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
-    structuralElements.h
+    structuralElements.h \
+    drainageDevide.h
 
 FORMS    += mainwindow.ui
 
