@@ -18,6 +18,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(menuFileOpen()));
     connect(ui->actionExit, SIGNAL(triggered()), this, SLOT(menuFileExit()));
 
+    // Редактирование
+    connect(ui->actionImageGradient, SIGNAL(triggered()), this, SLOT(convertToImageGradient()));
+
     image = new QImage();
 
     //Маска
@@ -84,6 +87,16 @@ void MainWindow::menuFileOpen()
 void MainWindow::menuFileExit()
 {
     close();
+}
+
+void MainWindow::convertToImageGradient()
+{
+    QImage* gradient = imageGradient(image);
+    delete image;
+    image = gradient;
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
 }
 
 //

@@ -38,6 +38,9 @@ private slots:
     void menuFileOpen();
     void menuFileExit();
 
+    // Работа с водоразделом
+    void convertToImageGradient();
+
 private:
     void loadImage();
     void activateMenu();

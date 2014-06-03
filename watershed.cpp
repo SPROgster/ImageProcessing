@@ -1,7 +1,7 @@
 #include <QImage>
 #include "watershed.h"
 
-QImage *gradient(const QImage *origin)
+QImage* imageGradient(const QImage *origin)
 {
     QImage* buffer = new QImage(origin->convertToFormat(QImage::Format_RGB32, Qt::MonoOnly));
 
