@@ -8,6 +8,7 @@
 #include <QSpacerItem>
 
 #include "imageentry.h"
+#include "watershed.h"
 
 namespace Ui {
 class MainWindow;
