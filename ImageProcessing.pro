@@ -16,12 +16,12 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
     structuralElements.cpp \
-    drainageDevide.cpp
+    watershed.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
-    drainageDevide.h
+    watershed.h
 
 FORMS    += mainwindow.ui
 
