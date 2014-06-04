@@ -1,6 +1,7 @@
 #include <QImage>
 #include <QBitmap>
 #include <QPainter>
+#include <QSet>
 #include "watershed.h"
 
 QImage* imageGradient(const QImage *origin)
@@ -89,18 +90,97 @@ int hsvValue(QRgb color)
 }
 
 
-QImage* watershed(const QImage *origin, int threshold)
+QImage* watershed(const QImage *origin, const int& threshold)
 {
     QImage* gradient = imageGradient(origin);
+    int width = gradient->width();
+    int height= gradient->height();
 
-    QImage c = gradient->createMaskFromColor(0xff000000, Qt::MaskInColor);
+    // Бассейны. Текущий и для предыдущего уровня
+    QImage* temp = gradientSumm(origin, threshold);
+    QImage* C = new QImage(temp->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+    delete temp;
 
-    for (int i = 1; i < 256; i++)
+    // Компоненты связности для n - 1 и n
+    int colorNumLast;
+    QImage* Qlast = selectComponents(C, colorNumLast);
+    int colorNum;
+    QImage* Q;
+
+    // Цвет/уровень воды. Текущее значение градиента
+    QRgb color = threshold + 1;
+    color += (color << 8) + (color << 16) + 0xFF000000;
+
+    // Маска с точками с параметром градиента равным color
+    QImage* T;
+
+    // Тут мы будем хранить номера компонент, которые пересекает текущий компонент
+    QList< QSet<QRgb> > intersectionComponents;
+    // Больше чем изначально было, быть не может. Или может?
+    intersectionComponents.reserve(colorNumLast);
+
+    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
     {
-        ;
+        T = new QImage(gradient->createMaskFromColor(color));
+        Q = selectComponents(T, colorNum);
+
+        // Расширяем наш список листов
+        if (intersectionComponents.size() <= colorNum)
+            for (int i = intersectionComponents.size(); i < colorNum; i++)
+                intersectionComponents.append(QSet<QRgb>());
+
+        // Очищаем сеты
+        for(int i = 0; i < colorNum; i++)
+            intersectionComponents[i].clear();
+
+        // Для каждой связной компоненты что-то делаем
+        for (int q = 0; q < colorNum; q++)
+        {
+            ///////////////////////////////////////////////////////////////////////////
+            //Определяем сколько связных компонент пересекает данная связная компонента
+
+            // Цвет текущего элемента
+            QRgb qColor = q+1;
+            qColor += (qColor << 8) + (qColor << 16) + 0xFF000000;
+
+            // Прямой доступ к массивам компонент
+            QRgb* qn    = (QRgb*)Q->scanLine(1);
+            QRgb* qlast = (QRgb*)Qlast->scanLine(1);
+            qn++; qlast++;
+
+            // Обнуляем набор пересекающих компонент
+
+            // Бегаем по картам компонент, собирая пересечения
+            for (int y = 1; y < height - 1; y++, qn += 2, qlast += 2)
+            {
+                for (int x = 1; x < width - 1; x++, qn++, qlast++)
+                {
+
+                }
+            }
+            ///////////////////////////////////////////////////////////////////////////
+
+        }
+
+        // Объединяем С и T
+        QPainter painter(C);
+        painter.save();
+        temp = new QImage(*T);
+
+        T->setAlphaChannel(*temp);
+        painter.drawImage(0, 0, *T);
+
+        delete temp;
+        painter.restore();
+
+        // Удаляем Т и пересчитываем связные компоненты у C
+        delete T;
+        delete Qlast;
+        Qlast = selectComponents(C, colorNumLast);
     }
 
-
+    delete Qlast;
+    delete C;
 }
 
 
@@ -277,11 +357,11 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
             }
     }
 
-    colorNumber = 0;
+    colorNumber = 1;
 
     for (int i = 0; i < componentsActive.size(); i++)
         if (componentsActive[i])
-            replaceColor(componentsMap, 0xFF000000 + i + 1, 0xFF000000 + ++colorNumber);
+            replaceColor(componentsMap, 0xFF000000 + i + 1, 0xFF000000 + colorNumber++);
 
     componentsActive.clear();
 
@@ -299,6 +379,7 @@ void replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
             if (*xLine == colorToReplace)
                 *xLine = newColor;
 }
+
 
 QImage *gradientSumm(const QImage *origin, int treshhold)
 {
