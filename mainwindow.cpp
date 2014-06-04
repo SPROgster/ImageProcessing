@@ -94,11 +94,13 @@ void MainWindow::menuFileExit()
 
 void MainWindow::convertToImageGradient()
 {
-    QImage* gradient = imageGradient(image);
+    QImage* gradient = gradientSumm(image, 25);
     delete image;
     image = gradient;
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+    addEntryToHistory("Градиент");
 }
 
 void MainWindow::giveWaterSlot()
@@ -137,10 +139,12 @@ void MainWindow::executeWatershed()
 {
     QList<bool> componentsActive;
 
-    QImage* gradient = imageGradient(image);
+    QImage* gradient = gradientSumm(image, 25);
     delete image;
 
-    QImage* newImage = selectComponents(gradient, componentsActive);
+    ui->imageView->setPixmap(QPixmap::fromImage(*gradient));
+
+    QImage* newImage = selectComponents(new QImage((gradient->createMaskFromColor(0xFF000000, Qt::MaskOutColor))), componentsActive);
 
     image = newImage;
 

@@ -1,5 +1,6 @@
 #include <QImage>
 #include <QBitmap>
+#include <QPainter>
 #include "watershed.h"
 
 QImage* imageGradient(const QImage *origin)
@@ -105,12 +106,12 @@ QImage* watershed(const QImage *origin)
 
 QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
 {
-    QImage bitmap = origin->convertToFormat(QImage::Format_Mono);
+    QImage bitmap(origin->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
 
     QImage* componentsMap = new QImage(bitmap.width(), bitmap.height(), QImage::Format_RGB32);
     componentsMap->fill(QColor(0, 0, 0, 0));
 
-    QRgb currColor = 0;
+    QRgb currColor = 0xFF000000;
 
     // Берем 2ю по счету строку и 2й по счету элемент. Граница изображения игнорируется
     QRgb* y1 = (QRgb*)bitmap.scanLine(1);
@@ -122,15 +123,15 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
     // QList<bool> componentsActive;
     componentsActive.clear();
 
-    int  curveNum  = 0,
-         curveNum1 = 0;   // В curveNum будет хранится активный номер рядомстоящей точки
+    unsigned int  curveNum  =  0xFF000000,
+         curveNum1 =  0xFF000000;   // В curveNum будет хранится активный номер рядомстоящей точки
 
     if (*y1 & 0x1)
     {
         componentsMap->setPixel(1, 1, ++currColor);
         componentsActive << true;
 
-        curveNum = curveNum1 = currColor;
+        curveNum = curveNum1 = currColor | 0xFF000000;
     }
     y1++;
 
@@ -139,14 +140,14 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
     {
         if (*y1 & 0x1)
         {
-            if (curveNum)
+            if (curveNum & 0xFFFFFF)
                 componentsMap->setPixel(x, 1, curveNum);
             else
             {
-                componentsMap->setPixel(x, 1, ++currColor);
+                componentsMap->setPixel(x, 1, ++currColor | 0xFF000000);
                 componentsActive << true;
 
-                curveNum = currColor;
+                curveNum = currColor | 0xFF000000;
             }
         }
         else
@@ -160,7 +161,7 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
     {
         if (bitmap.pixel(1, y) & 0x1)
         {
-            if (curveNum)
+            if (curveNum & 0xFFFFFF)
                 componentsMap->setPixel(1, y, curveNum);
             else
             {
@@ -189,15 +190,15 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
         // Смотрим связные элементы по строке
         for (int x = 2; x < bitmap.width() - 1; x++, y1++, y2++, bitmapPixel++)
             // Если пиксель не пустой, проверяем его окружение и относим к какой нибудь из областей
-            if (*bitmapPixel & 0x1)
+            if (bitmap.pixel(x, y) & 0xFF)
             {
+                //curveNum = curveNum1 = 0;
                 //Если мы тут, то под нами элемент. Осталось определить, к какой группе его определить
 
                 // _______
                 // |*| | |
                 // _______
                 // | |?| |
-
                 curveNum1 = *(y1 - 1) & 0xFFFFFF;
                 if (curveNum1)
                 {   // Если выбранный пиксель пронумерован, то проверяемый соединяем с ним
@@ -211,13 +212,15 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
                 // | |?| |
                 curveNum1 = *(y1) & 0xFFFFFF;
                 if (curveNum1)
+                {
                     if (curveNum != curveNum1 && !curveNum)
                     {   // TODO сверху 2 ячейки занумерованы. но теоритически, этот if всегда -
-                        componentsActive.replace(curveNum1, false);
+                        componentsActive.replace(curveNum1 - 1, false);
                         replaceColor(componentsMap, curveNum1, curveNum);
                     }
                     else
                         curveNum = curveNum1;
+                }
 
                 // _______
                 // | | | |
@@ -227,13 +230,15 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
                 // TODO: теоритически, на это можно наложить ограничение, если сверху слева пусто и еще прямо сверху
                 curveNum1 = *(y2 - 1) & 0xFFFFFF;
                 if (curveNum1)
+                {
                     if (curveNum != curveNum1 && !curveNum)
                     {   // TODO сверху 2 ячейки занумерованы. но теоритически, этот if всегда -
-                        componentsActive.replace(curveNum1, false);
+                        componentsActive.replace(curveNum1 - 1, false);
                         replaceColor(componentsMap, curveNum1, curveNum);
                     }
                     else
                         curveNum = curveNum1;
+                }
 
                 // этот элемент может быть более новым, чем выше. чтобы не плодить новые
                 // _______
@@ -244,29 +249,44 @@ QImage* selectComponents(const QImage* origin, QList<bool> &componentsActive)
                 {
                     curveNum1 = *(y1 + 1) & 0xFFFFFF;
                     if (curveNum1)
+                    {
                         if (curveNum != curveNum1 && !curveNum)
                         {   // TODO сверху 2 ячейки занумерованы. но теоритически, этот if всегда -
-                            componentsActive.replace(curveNum1, false);
+                            componentsActive.replace(curveNum1 - 1, false);
                             replaceColor(componentsMap, curveNum1, curveNum);
                         }
                         else
                             curveNum = curveNum1;
+                    }
                 }
 
                 // Если сосед есть
-                if (!curveNum)
-                    *y2 = curveNum;
+                if (curveNum)
+                    *y2 = curveNum | 0xFF000000;
                 else
                 {   // Если соседа нету
-                    *y2 = ++currColor;
+                    *y2 = ++currColor | 0xFF000000;
                     componentsActive << true;
                 }
             }
     }
 
+    //QImage* test = new QImage(componentsMap->createMaskFromColor(0xFF00000));
+    int colors = componentsActive.size();
+    float dc = 256./ colors;
+
+    for (int i = 0; i < colors; i++)
+    {
+        int newColor = dc * (i + 1);
+        newColor = newColor + (newColor << 8) + (newColor << 16);
+        newColor %= 256;
+        QColor clr;
+        clr.setHsv(newColor, 255, 255);
+        replaceColor(componentsMap, 0xFF000000 + i + 1, clr.rgba());
+    }
+
     return componentsMap;
 }
-
 
 void replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
 {
@@ -279,4 +299,29 @@ void replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
                 *xLine = newColor;
         }
     }
+}
+
+QImage *gradientSumm(const QImage *origin, int treshhold)
+{
+    QImage* gradient = imageGradient(origin);
+
+    QImage* c = new QImage(gradient->width(), gradient->height(), QImage::Format_RGB32);
+    c->fill(Qt::white);
+
+    QImage water(gradient->width(), gradient->height(), QImage::Format_RGB32);
+    water.fill(Qt::black);
+    for(int i = 0; i < treshhold; i++)
+    {
+        QRgb color = i + (i << 8) + (i << 16);
+
+        QPainter painter((QPaintDevice*)c);
+        painter.save();
+        water.setAlphaChannel(gradient->createMaskFromColor(color, Qt::MaskInColor));
+        painter.drawImage(0, 0, water);
+        water.fill(Qt::black);
+        painter.restore();
+    }
+
+    delete gradient;
+    return c;
 }
