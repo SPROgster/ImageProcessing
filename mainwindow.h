@@ -42,6 +42,7 @@ private slots:
     void convertToImageGradient();
     void giveWaterSlot();
     void executeWatershed();
+    void selectConectedSlot();
 
 private:
     void loadImage();

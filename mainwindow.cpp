@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionImageGradient, SIGNAL(triggered()), this, SLOT(convertToImageGradient()));
     connect(ui->actionGiveWater, SIGNAL(triggered()), this, SLOT(giveWaterSlot()));
     connect(ui->actionWaterShed, SIGNAL(triggered()), this, SLOT(executeWatershed()));
+    connect(ui->actionSelectConected, SIGNAL(triggered()), this, SLOT(selectConectedSlot()));
 
     image = new QImage();
 
@@ -137,14 +138,17 @@ void MainWindow::giveWaterSlot()
 
 void MainWindow::executeWatershed()
 {
-    QList<bool> componentsActive;
+    watershed(image);
 
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+}
+
+void MainWindow::selectConectedSlot()
+{
     QImage* gradient = gradientSumm(image, 25);
     delete image;
 
-    ui->imageView->setPixmap(QPixmap::fromImage(*gradient));
-
-    QImage* newImage = selectComponents(new QImage((gradient->createMaskFromColor(0xFF000000, Qt::MaskOutColor))), componentsActive);
+    QImage* newImage = displayComponents(new QImage((gradient->createMaskFromColor(0xFF000000, Qt::MaskOutColor))));
 
     image = newImage;
 

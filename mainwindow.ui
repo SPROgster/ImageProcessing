@@ -61,7 +61,7 @@
            <x>0</x>
            <y>0</y>
            <width>556</width>
-           <height>423</height>
+           <height>422</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
@@ -238,7 +238,7 @@
      <x>0</x>
      <y>0</y>
      <width>682</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -256,6 +256,7 @@
     <addaction name="actionImageGradient"/>
     <addaction name="actionGiveWater"/>
     <addaction name="actionWaterShed"/>
+    <addaction name="actionSelectConected"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -315,8 +316,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>103</width>
-          <height>436</height>
+          <width>100</width>
+          <height>432</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -365,6 +366,11 @@
   <action name="actionWaterShed">
    <property name="text">
     <string>Сегментация водоразделом</string>
+   </property>
+  </action>
+  <action name="actionSelectConected">
+   <property name="text">
+    <string>Выделить связные компоненты</string>
    </property>
   </action>
  </widget>
