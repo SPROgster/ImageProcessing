@@ -61,7 +61,7 @@
            <x>0</x>
            <y>0</y>
            <width>556</width>
-           <height>422</height>
+           <height>423</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
@@ -219,6 +219,13 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QLCDNumber" name="lcdNumber">
+          <property name="digitCount">
+           <number>3</number>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>
@@ -231,7 +238,7 @@
      <x>0</x>
      <y>0</y>
      <width>682</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -247,6 +254,8 @@
      <string>Редактировать</string>
     </property>
     <addaction name="actionImageGradient"/>
+    <addaction name="actionGiveWater"/>
+    <addaction name="actionWaterShed"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -306,8 +315,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>100</width>
-          <height>432</height>
+          <width>103</width>
+          <height>436</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -346,6 +355,16 @@
   <action name="actionImageGradient">
    <property name="text">
     <string>Градиент изображения</string>
+   </property>
+  </action>
+  <action name="actionGiveWater">
+   <property name="text">
+    <string>Заполнение</string>
+   </property>
+  </action>
+  <action name="actionWaterShed">
+   <property name="text">
+    <string>Сегментация водоразделом</string>
    </property>
   </action>
  </widget>

@@ -40,6 +40,8 @@ private slots:
 
     // Работа с водоразделом
     void convertToImageGradient();
+    void giveWaterSlot();
+    void executeWatershed();
 
 private:
     void loadImage();

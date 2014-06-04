@@ -2,6 +2,7 @@
 #include <QMessageBox>
 #include <QPixmap>
 #include <QMouseEvent>
+#include <QtTest>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -20,6 +21,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Редактирование
     connect(ui->actionImageGradient, SIGNAL(triggered()), this, SLOT(convertToImageGradient()));
+    connect(ui->actionGiveWater, SIGNAL(triggered()), this, SLOT(giveWaterSlot()));
+    connect(ui->actionWaterShed, SIGNAL(triggered()), this, SLOT(executeWatershed()));
 
     image = new QImage();
 
@@ -96,7 +99,52 @@ void MainWindow::convertToImageGradient()
     image = gradient;
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
+}
 
+void MainWindow::giveWaterSlot()
+{
+    QImage* gradient = imageGradient(image);
+    delete image;
+    image = gradient;
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+    QImage c(gradient->width(), gradient->height(), QImage::Format_RGB32);
+    c.fill(Qt::white);
+
+    QImage water(gradient->width(), gradient->height(), QImage::Format_RGB32);
+    water.fill(Qt::black);
+    for(int i = 0; i < 256; i++)
+    {
+        QRgb color = i + (i << 8) + (i << 16);
+
+        ui->lcdNumber->display(i);
+
+        QPainter painter(&c);
+        painter.save();
+        water.setAlphaChannel(image->createMaskFromColor(color, Qt::MaskInColor));
+        painter.drawImage(0, 0, water);
+        water.fill(Qt::black);
+        painter.restore();
+
+        ui->imageView->setPixmap(QPixmap::fromImage(c));
+
+        QTest::qWait(125);
+    }
+}
+
+void MainWindow::executeWatershed()
+{
+    QList<bool> componentsActive;
+
+    QImage* gradient = imageGradient(image);
+    delete image;
+
+    QImage* newImage = selectComponents(gradient, componentsActive);
+
+    image = newImage;
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*image));
 }
 
 //
