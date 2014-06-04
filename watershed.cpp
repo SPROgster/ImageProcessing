@@ -92,6 +92,7 @@ int hsvValue(QRgb color)
 
 QImage* watershed(const QImage *origin, const int& threshold)
 {
+    int colorChange = 50;
     QImage* gradient = imageGradient(origin);
     int width = gradient->width();
     int height= gradient->height();
@@ -119,7 +120,9 @@ QImage* watershed(const QImage *origin, const int& threshold)
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
-    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
+    int allNumbers = 0;
+
+    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101 * colorChange)
     {
         T = new QImage(gradient->createMaskFromColor(color));
         Q = selectComponents(T, colorNum);
@@ -133,33 +136,37 @@ QImage* watershed(const QImage *origin, const int& threshold)
         for(int i = 0; i < colorNum; i++)
             intersectionComponents[i].clear();
 
-        // Для каждой связной компоненты что-то делаем
+
+        ////////////////////////////////////////////////////////////////////////////
+        ///Определяем сколько связных компонент пересекает данная связная компонента
+
+        // Прямой доступ к массивам компонент
+        QRgb* qn    = (QRgb*)Q->scanLine(1);
+        QRgb* qlast = (QRgb*)Qlast->scanLine(1);
+        qn++; qlast++;
+
+        QRgb currQ, currQLast;
+
+        // Бегаем по картам компонент, собирая пересечения
+        for (int y = 1; y < height - 1; y++, qn += 2, qlast += 2)
+            for (int x = 1; x < width - 1; x++, qn++, qlast++)
+            {
+                currQ     = *qn & 0xFFFFFF;
+                currQLast = *qlast & 0xFFFFFF;
+                if (currQ && currQLast)
+                    intersectionComponents[currQ] << currQLast;
+            }
+        ///
+        /////////////////////////////////////////////////////////////////////////////
+
+        // Проверяем, что делать. Ставить ли перегородку и прочее
+        // Если у нас по одному пересечению, то ничего не делаем. Это лишь капля в море
+        // А если связный компонент пересекает несколько
+
         for (int q = 0; q < colorNum; q++)
         {
-            ///////////////////////////////////////////////////////////////////////////
-            //Определяем сколько связных компонент пересекает данная связная компонента
-
-            // Цвет текущего элемента
-            QRgb qColor = q+1;
-            qColor += (qColor << 8) + (qColor << 16) + 0xFF000000;
-
-            // Прямой доступ к массивам компонент
-            QRgb* qn    = (QRgb*)Q->scanLine(1);
-            QRgb* qlast = (QRgb*)Qlast->scanLine(1);
-            qn++; qlast++;
-
-            // Обнуляем набор пересекающих компонент
-
-            // Бегаем по картам компонент, собирая пересечения
-            for (int y = 1; y < height - 1; y++, qn += 2, qlast += 2)
-            {
-                for (int x = 1; x < width - 1; x++, qn++, qlast++)
-                {
-
-                }
-            }
-            ///////////////////////////////////////////////////////////////////////////
-
+            if (intersectionComponents[q].size() > 0)
+                allNumbers++;
         }
 
         // Объединяем С и T
