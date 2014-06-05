@@ -11,6 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = ImageProcessing
 TEMPLATE = app
 
+QMAKE_LIBS +=-static
 
 SOURCES += main.cpp\
         mainwindow.cpp \
