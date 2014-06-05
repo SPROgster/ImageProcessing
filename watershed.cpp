@@ -14,12 +14,15 @@ QImage* imageGradient(const QImage *origin)
     QImage* buffer = new QImage(origin->width(), origin->height(), QImage::Format_RGB32);
     buffer->fill(Qt::black);
 
-    int maskSize = (buffer->width() - 2) * (buffer->height() - 2);
+    int width  = buffer->width();
+    int height = buffer->height();
+
+    int maskSize = (buffer->width() - 2) * (height - 2);
 
     int* gradientDenormStart;
     int* gradientDenorm = gradientDenormStart = new int[maskSize];
 
-    QRgb *y1, *y2, *y3,
+    QRgb *y1, *y2, *y3, *y4,
              *yOut;
 
     int min =  10000000;
@@ -100,6 +103,19 @@ QImage* imageGradient(const QImage *origin)
 
     delete [] gradientDenormStart;
 
+    // Копируем боковые участки
+    memcpy(buffer->scanLine(0),          buffer->scanLine(1),          sizeof(uchar) * width);
+    memcpy(buffer->scanLine(height - 1), buffer->scanLine(height - 2), sizeof(uchar) * width);
+
+    y1 = y2 = (QRgb*)buffer->scanLine(1);
+    y3 = y4 = (QRgb*)buffer->scanLine(2) - 1;
+    y2++; y3--;
+    for (int y = 1; y < height - 1; y++, y1 += width, y2 += width, y3 += width, y4 += width)
+    {
+        *y1 = *y2;
+        *y4 = *y3;
+    }
+
     return buffer;
 }
 
@@ -157,6 +173,9 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
+    // Для бассейнов пересечения
+    QList<QImage> qIntersec;
+
     for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
     {
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor));
@@ -189,15 +208,14 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         ///Определяем сколько связных компонент пересекает данная связная компонента
 
         // Прямой доступ к массивам компонент
-        QRgb* qn    = (QRgb*)Q->scanLine(1);
-        QRgb* qlast = (QRgb*)Qlast->scanLine(1);
-        qn++; qlast++;
+        QRgb* qn    = (QRgb*)Q->scanLine(0);
+        QRgb* qlast = (QRgb*)Qlast->scanLine(0);
 
         QRgb currQ, currQLast;
 
         // Бегаем по картам компонент, собирая пересечения
-        for (int y = 1; y < height - 1; y++, qn += 2, qlast += 2)
-            for (int x = 1; x < width - 1; x++, qn++, qlast++)
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++, qn++, qlast++)
             {
                 currQ     = *qn & 0xFFFFFF;
                 currQLast = *qlast & 0xFFFFFF;
@@ -215,34 +233,29 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         for (int q = 0; q < colorNum; q++)
             if (intersectionComponents[q].size() > 1)
             {
-                imageDisplay->setPixmap(QPixmap::fromImage(*C));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("C")).exec();
+                // Выделяем весь бассейн q
+                QImage* qSpace = new QImage(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor));
+                temp = new QImage(qSpace->convertToFormat(QImage::Format_ARGB32));
+                temp->invertPixels();
+                qSpace->setAlphaChannel(*temp);
+                delete temp;
 
-                // Выделяем весь бассейн
-                QImage qSpace(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor));
-                //qSpace->setAlphaChannel(*qSpace);
-
-                imageDisplay->setPixmap(QPixmap::fromImage(qSpace));
+                imageDisplay->setPixmap(QPixmap::fromImage(*qSpace));
                 QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
 
                 // Выделяем бассейны, которые пересекает наш новый бассейн
-                Qintesect = new QImage(width, height, QImage::Format_ARGB32_Premultiplied);
-                Qintesect->fill(Qt::transparent);
+                QList<QImage> qIntersec;
 
-                // Собственно пересечение
+                QRgb qin;
+                foreach(qin, intersectionComponents[q])
                 {
-                    QPainter painterIntersec(Qintesect);
-                    painterIntersec.save();
+                    QImage qadd = Qlast->createMaskFromColor(qin | 0xFF000000, Qt::MaskInColor);
+                    qadd.setAlphaChannel(qadd);
 
-                    QRgb qin;
-                    foreach(qin, intersectionComponents[q])
-                    {
-                        QImage qadd = Qlast->createMaskFromColor(qin | 0xFF000000, Qt::MaskInColor);
-                        qadd.setAlphaChannel(qadd);
-                    }
+                    qIntersec << qadd;
 
-                    painterIntersec.drawImage(0, 0, *Clast);
-                    painterIntersec.restore();
+                    imageDisplay->setPixmap(QPixmap::fromImage(qadd));
+                    QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();
                 }
 
                 /*
@@ -267,6 +280,8 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 resPaint.save();
                 resPaint.drawImage(0, 0, *dilationRes);
                 resPaint.restore();
+
+                delete qSpace;
             }
 
         // Удаляем Т и пересчитываем связные компоненты у C
@@ -295,10 +310,8 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
     QRgb currColor = 0xFF000000;
 
     // Берем 2ю по счету строку и 2й по счету элемент. Граница изображения игнорируется
-    QRgb* y1 = (QRgb*)bitmap.scanLine(1);
-    QRgb* y2 = (QRgb*)componentsMap->scanLine(1);
-    y1++;
-    y2++;
+    QRgb* y1 = (QRgb*)bitmap.scanLine(0);
+    QRgb* y2 = (QRgb*)componentsMap->scanLine(0);
 
     // Список активных маркеров. В последствие, когда будем соединять несколько линий, которая правее будет заменяться
     //на ту, что левее и помечаться в списке неактивной
@@ -319,7 +332,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
 
     int width = bitmap.width();
     // Маркируем первую строку. Смотрим, стоит ли что слева, для этого curveNum пригодилась
-    for (int x = 2; x < bitmap.width() - 1; x++, y1++, y2++)
+    for (int x = 1; x < bitmap.width(); x++, y1++, y2++)
     {
         if (*y1 & 0x1)
         {
@@ -337,13 +350,10 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
             curveNum = 0;
     }
 
-    y1 += 2;
-    y2 += 2;
-
     curveNum = curveNum1;
 
     // Маркируем первый столбец
-    for (int y = 2; y < bitmap.height() - 1; y++, y1 += width, y2 += width)
+    for (int y = 1; y < bitmap.height(); y++, y1 += width, y2 += width)
     {
         if (*(y1) & 0x1)
         {
@@ -363,20 +373,19 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
 
     // Теперь идем по внутренней части
     QRgb *bitmapPixel;
-    bitmapPixel = (QRgb*)bitmap.scanLine(2);
+    bitmapPixel = (QRgb*)bitmap.scanLine(1);
     bitmapPixel--;
 
-    y1 = (QRgb *)componentsMap->scanLine(1);
-    y2 = (QRgb *)componentsMap->scanLine(2);
-    y1--; y2--;
+    y1 = (QRgb *)componentsMap->scanLine(0);
+    y2 = (QRgb *)componentsMap->scanLine(1);
 
-    for (int y = 2; y < bitmap.height() - 1; y++)
+    for (int y = 1; y < bitmap.height() - 1; y++)
     {
-        bitmapPixel += 3;
-        y1 += 3; y2 += 3; // + 1 лишний раз будет делать for по x
+        bitmapPixel++;
+        y1++; y2++; // + 1 лишний раз будет делать for по x
 
         // Смотрим связные элементы по строке
-        for (int x = 2; x < width - 1; x++, y1++, y2++, bitmapPixel++)
+        for (int x = 1; x < width; x++, y1++, y2++, bitmapPixel++)
             // Если пиксель не пустой, проверяем его окружение и относим к какой нибудь из областей
             if ( *bitmapPixel & 0xFF)
             {
@@ -471,6 +480,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
 
     return componentsMap;
 }
+
 
 void replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
 {

@@ -92,8 +92,8 @@ dilation(QImage *origin, const QImage &element, const QColor pixelColor,
 
     painter.begin(delationResult);
 
-    for (int x = 1; x < width - 1; x++)
-        for (int y = 1; y < height - 1; y++)
+    for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
         {
             QColor color(origin->pixel(x, y));
             // Проверяем, пиксель
