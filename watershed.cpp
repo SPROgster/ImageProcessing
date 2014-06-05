@@ -94,7 +94,7 @@ int hsvValue(QRgb color)
 
 QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold)
 {
-    int colorChange = 1;
+    int colorChange = 5;
     QImage* gradient = imageGradient(origin);
     int width = gradient->width();
     int height= gradient->height();

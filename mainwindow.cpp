@@ -138,7 +138,7 @@ void MainWindow::giveWaterSlot()
 
 void MainWindow::executeWatershed()
 {
-    watershed(image, ui->imageView, 70);
+    watershed(image, ui->imageView, 160);
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
 }
