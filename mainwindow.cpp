@@ -138,9 +138,12 @@ void MainWindow::giveWaterSlot()
 
 void MainWindow::executeWatershed()
 {
-    watershed(image, ui->imageView, 160);
+    QImage* res = watershed(image, ui->imageView, 160);
+    delete image;
+    image = res;
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
+    addEntryToHistory("Водораздел");
 }
 
 void MainWindow::selectConectedSlot()

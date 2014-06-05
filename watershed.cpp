@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include "watershed.h"
+#include "morphology.h"
 #include "structuralElements.h"
 
 QImage* imageGradient(const QImage *origin)
@@ -54,24 +55,46 @@ QImage* imageGradient(const QImage *origin)
 
     // Переходим на начало градиента
     gradientDenorm = gradientDenormStart;
-
-    float mulCoef = 250. / (max - min);
-
     QRgb pixel;
 
-    for (int y = 1; y < buffer->height() - 1; y++)
+    if (max-min > 254)
     {
-        yOut = (QRgb*)buffer->scanLine(y);
+        float mulCoef = 254. / (max - min);
 
-        yOut++;
 
-        for (int x = 1; x < buffer->width() - 1; x++,
-                                                 yOut++,
-                                                 gradientDenorm++)
+
+        for (int y = 1; y < buffer->height() - 1; y++)
         {
-            pixel = (int)( (*gradientDenorm - min) * mulCoef);
+            yOut = (QRgb*)buffer->scanLine(y);
 
-            *yOut = (pixel << 16) + (pixel << 8) + pixel;
+            yOut++;
+
+            for (int x = 1; x < buffer->width() - 1; x++,
+                                                     yOut++,
+                                                     gradientDenorm++)
+            {
+                pixel = (int)( (*gradientDenorm - min) * mulCoef);
+
+                *yOut = (pixel << 16) + (pixel << 8) + pixel;
+            }
+        }
+    }
+    else
+    {
+        for (int y = 1; y < buffer->height() - 1; y++)
+        {
+            yOut = (QRgb*)buffer->scanLine(y);
+
+            yOut++;
+
+            for (int x = 1; x < buffer->width() - 1; x++,
+                                                     yOut++,
+                                                     gradientDenorm++)
+            {
+                pixel = *gradientDenorm & 0xFF;
+
+                *yOut = (pixel << 16) + (pixel << 8) + pixel;
+            }
         }
     }
 
@@ -100,6 +123,8 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     int height= gradient->height();
     QImage* temp;
 
+    QImage* result = new QImage(*origin);
+
     QImage segmentationMask(gradient->width(), gradient->height(), QImage::Format_ARGB32_Premultiplied);
     segmentationMask.fill(Qt::transparent);
 
@@ -118,7 +143,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     // Пересечение бассейнов
     // TODO а не будет ли это лишь T?
     QImage* Qintesect;
-    QImage* structuralElement = square(3, 0xFFFFFFFF);
+    QImage* structuralElement = square(3, 0xFFFF0000);
 
     // Цвет/уровень воды. Текущее значение градиента
     QRgb color = threshold + 1;
@@ -131,8 +156,6 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     QList< QSet<QRgb> > intersectionComponents;
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
-
-    int allNumbers = 0;
 
     for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
     {
@@ -194,28 +217,47 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
             {
                 // Строим пересечение двух связных компонент
                 // Сначало создаем пересечение
-                Qintesect = new QImage(*Q);
-                Qintesect->setAlphaChannel(Qintesect->createMaskFromColor(q | 0xFF000000, Qt::MaskInColor));
-
-                // Альфа-канал для пересечения
-                temp = new QImage(*Clast);
-                Clast->setAlphaChannel(*temp);
-                delete temp;
+                Qintesect = new QImage(width, height, QImage::Format_ARGB32_Premultiplied);
+                Qintesect->fill(Qt::transparent);
 
                 // Собственно пересечение
-                QPainter painterIntersec(Qintesect);
-                painterIntersec.save();
-                painterIntersec.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-                painterIntersec.drawImage(0, 0, *Clast);
-                painterIntersec.restore();
+                {
+                    QPainter painterIntersec(Qintesect);
+                    painterIntersec.save();
 
-                Qintesect->setAlphaChannel(Qintesect->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+                    QRgb qin;
+                    foreach(qin, intersectionComponents[q])
+                    {
+                        QImage qadd = Qlast->createMaskFromColor(qin | 0xFF000000, Qt::MaskInColor);
+                        qadd.setAlphaChannel(qadd);
+                    }
+
+                    painterIntersec.drawImage(0, 0, *Clast);
+                    painterIntersec.restore();
+                }
+
+                /*
+                // Вот тут альфа не выставилась
+                temp = new QImage(Qintesect->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+                Qintesect->setAlphaChannel(*temp);
+                delete temp;
+                */
 
                 // Теперь морфология
+                QImage* dilationRes = dilation(Qintesect, *structuralElement, QColor(q | 0xFFFFFFFF), QColor(Qt::transparent));
 
+                imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
+                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
 
-                imageDisplay->setPixmap(QPixmap::fromImage(*Qintesect));
-                QMessageBox(QMessageBox::NoIcon, QString("fd"), QString("Пересечение двух")).exec();
+                dilationRes->setAlphaChannel(Q->createMaskFromColor(q | 0xFF000000, Qt::MaskInColor));
+
+                imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
+                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
+
+                QPainter resPaint(result);
+                resPaint.save();
+                resPaint.drawImage(0, 0, *dilationRes);
+                resPaint.restore();
             }
 
         // Удаляем Т и пересчитываем связные компоненты у C
@@ -227,10 +269,10 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         Clast = new QImage(*C);
     }
 
-    qDebug(QString("AllNumbers %1").arg(allNumbers).toStdString().c_str());
-
     delete Qlast;
     delete Clast;
+
+    return result;
 }
 
 
@@ -337,10 +379,10 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
                 // |*| | |
                 // _______
                 // | |?| |
-                curveNum1 = *(y1 - 1) & 0xFFFFFF;
+                /*curveNum1 = *(y1 - 1) & 0xFFFFFF;
                 if (curveNum1)
                     // Если выбранный пиксель пронумерован, то проверяемый соединяем с ним
-                    curveNum = curveNum1;
+                    curveNum = curveNum1;*/
 
                 // _______
                 // | |*| |
@@ -349,12 +391,12 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
                 curveNum1 = *y1 & 0xFFFFFF;
                 if (curveNum1)
                 {
-                    if (curveNum != curveNum1 && curveNum)
+                    /*if (curveNum != curveNum1 && curveNum)
                     {   // TODO сверху 2 ячейки занумерованы. но теоритически, этот if всегда -
                         componentsActive.replace(curveNum1 - 1, false);
                         replaceColor(componentsMap, 0xFF000000 | curveNum1, 0xFF000000 | curveNum);
                     }
-                    else
+                    else*/
                         curveNum = curveNum1;
                 }
 
@@ -381,7 +423,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
                 // | | |*|
                 // _______
                 // | |?| |
-                if (x < bitmap.width() - 2)
+                /*if (x < bitmap.width() - 2)
                 {
                     curveNum1 = *(y1 + 1) & 0xFFFFFF;
                     if (curveNum1)
@@ -394,7 +436,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
                         else
                             curveNum = curveNum1;
                     }
-                }
+                }*/
 
                 // Если сосед есть
                 if (curveNum)

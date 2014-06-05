@@ -1,10 +1,7 @@
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
-
 #include <QPainter>
 
 // Морфологические операции
-QImage* MainWindow::
+QImage*
 erosion(QImage *origin, const QImage &element, const QColor pixelColor,
          const QColor background)
 {
@@ -74,7 +71,7 @@ erosion(QImage *origin, const QImage &element, const QColor pixelColor,
     return erosionResult;
 }
 
-QImage* MainWindow::
+QImage*
 dilation(QImage *origin, const QImage &element, const QColor pixelColor,
           const QColor background)
 {
@@ -95,8 +92,8 @@ dilation(QImage *origin, const QImage &element, const QColor pixelColor,
 
     painter.begin(delationResult);
 
-    for (int x = 0; x < width; x++)
-        for (int y = 0; y < height; y++)
+    for (int x = 1; x < width - 1; x++)
+        for (int y = 1; y < height - 1; y++)
         {
             QColor color(origin->pixel(x, y));
             // Проверяем, пиксель
@@ -116,7 +113,7 @@ QImage *opening     (QImage *origin, QImage *element)
 
 }
 */
-QImage* MainWindow::
+QImage*
 closing(QImage *origin, QImage *element, const QColor pixelColor,
                 const QColor background)
 {

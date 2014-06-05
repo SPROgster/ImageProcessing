@@ -54,7 +54,6 @@ private:
     void clearHistory();
 
     #include "structuralElements.h"
-    #include "morphology.h"
 
 private:
     Ui::MainWindow *ui;
