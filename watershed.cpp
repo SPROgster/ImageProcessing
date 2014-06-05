@@ -146,7 +146,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
-    QImage* Clast = new QImage(C->createMaskFromColor(0xFF000000, Qt::MaskInColor));
+    QImage* Clast = new QImage(C->createMaskFromColor(0x000000, Qt::MaskInColor));
     delete C;
     C = new QImage(*Clast);
 
@@ -173,10 +173,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
-    // Для бассейнов пересечения
-    QList<QImage> qIntersec;
-
-    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
+    for (int colorI = threshold + 1; colorI < 255; colorI++, color += 0x010101)
     {
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor));
 
@@ -235,7 +232,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
             {
                 // Выделяем весь бассейн q
                 QImage* qSpace = new QImage(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor));
-                temp = new QImage(qSpace->convertToFormat(QImage::Format_ARGB32));
+                temp = new QImage(*qSpace);
                 temp->invertPixels();
                 //qSpace->setAlphaChannel(*temp);
                 delete temp;
@@ -372,7 +369,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
     y1 = (QRgb *)componentsMap->scanLine(0);
     y2 = (QRgb *)componentsMap->scanLine(1);
 
-    for (int y = 1; y < bitmap.height() - 1; y++)
+    for (int y = 1; y < bitmap.height(); y++)
     {
         bitmapPixel++;
         y1++; y2++; // + 1 лишний раз будет делать for по x
