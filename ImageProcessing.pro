@@ -16,12 +16,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
     structuralElements.cpp \
-    watershed.cpp
+    watershed.cpp \
+    morphology.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
-    watershed.h
+    watershed.h \
+    morphology.h
 
 FORMS    += mainwindow.ui
 
