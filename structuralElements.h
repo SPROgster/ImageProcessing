@@ -3,4 +3,5 @@
 // Структурные элементы
 QImage *ring        (int radius, const QColor color);
 QImage *disk        (int radius, const QColor color);
+QImage *square      (int a, const QColor color);
 #endif // STRUCTURALELEMENTS_H

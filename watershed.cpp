@@ -2,6 +2,7 @@
 #include <QBitmap>
 #include <QPainter>
 #include <QSet>
+#include <QDebug>
 #include "watershed.h"
 
 QImage* imageGradient(const QImage *origin)
@@ -92,19 +93,21 @@ int hsvValue(QRgb color)
 
 QImage* watershed(const QImage *origin, const int& threshold)
 {
-    int colorChange = 50;
+    int colorChange = 1;
     QImage* gradient = imageGradient(origin);
     int width = gradient->width();
     int height= gradient->height();
+    QImage* temp;
 
     // Бассейны. Текущий и для предыдущего уровня
-    QImage* temp = gradientSumm(origin, threshold);
-    QImage* C = new QImage(temp->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
-    delete temp;
+    QImage* C = gradientSumm(origin, threshold);
+    QImage* Clast = new QImage(C->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+    delete C;
+    C = new QImage(*Clast);
 
     // Компоненты связности для n - 1 и n
     int colorNumLast;
-    QImage* Qlast = selectComponents(C, colorNumLast);
+    QImage* Qlast = selectComponents(Clast, colorNumLast);
     int colorNum;
     QImage* Q;
 
@@ -120,12 +123,23 @@ QImage* watershed(const QImage *origin, const int& threshold)
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
-    int allNumbers = 0;
-
     for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101 * colorChange)
     {
         T = new QImage(gradient->createMaskFromColor(color));
-        Q = selectComponents(T, colorNum);
+
+        // Объединяем С и T
+        QPainter painter(C);
+        painter.save();
+        temp = new QImage(*T);
+
+        T->setAlphaChannel(*temp);
+        painter.drawImage(0, 0, *T);
+
+        delete temp;
+        painter.restore();
+
+        // Выделяем связные компоненты
+        Q = selectComponents(C, colorNum);
 
         // Расширяем наш список листов
         if (intersectionComponents.size() <= colorNum)
@@ -166,28 +180,22 @@ QImage* watershed(const QImage *origin, const int& threshold)
         for (int q = 0; q < colorNum; q++)
         {
             if (intersectionComponents[q].size() > 0)
-                allNumbers++;
+            {
+                //
+            }
         }
-
-        // Объединяем С и T
-        QPainter painter(C);
-        painter.save();
-        temp = new QImage(*T);
-
-        T->setAlphaChannel(*temp);
-        painter.drawImage(0, 0, *T);
-
-        delete temp;
-        painter.restore();
 
         // Удаляем Т и пересчитываем связные компоненты у C
         delete T;
         delete Qlast;
         Qlast = selectComponents(C, colorNumLast);
+
+        delete Clast;
+        Clast = new QImage(*C);
     }
 
     delete Qlast;
-    delete C;
+    delete Clast;
 }
 
 

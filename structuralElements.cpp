@@ -42,3 +42,13 @@ disk        (int radius, const QColor color)
     return disk;
 }
 
+
+
+QImage *square(int a, const QColor color)
+{
+    QImage* square = new QImage(a, a, QImage::Format_ARGB32);
+
+    square->fill(color);
+
+    return square;
+}
