@@ -202,7 +202,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 currQ     = *qn & 0xFFFFFF;
                 currQLast = *qlast & 0xFFFFFF;
                 if (currQ && currQLast)
-                    intersectionComponents[currQ] << currQLast;
+                    intersectionComponents[currQ - 1] << currQLast;
             }
         ///
         /////////////////////////////////////////////////////////////////////////////
@@ -215,8 +215,17 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         for (int q = 0; q < colorNum; q++)
             if (intersectionComponents[q].size() > 1)
             {
-                // Строим пересечение двух связных компонент
-                // Сначало создаем пересечение
+                imageDisplay->setPixmap(QPixmap::fromImage(*C));
+                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("C")).exec();
+
+                // Выделяем весь бассейн
+                QImage qSpace(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor));
+                //qSpace->setAlphaChannel(*qSpace);
+
+                imageDisplay->setPixmap(QPixmap::fromImage(qSpace));
+                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
+
+                // Выделяем бассейны, которые пересекает наш новый бассейн
                 Qintesect = new QImage(width, height, QImage::Format_ARGB32_Premultiplied);
                 Qintesect->fill(Qt::transparent);
 
@@ -246,13 +255,13 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 // Теперь морфология
                 QImage* dilationRes = dilation(Qintesect, *structuralElement, QColor(q | 0xFFFFFFFF), QColor(Qt::transparent));
 
-                imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
+                //imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
+                //QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
 
                 dilationRes->setAlphaChannel(Q->createMaskFromColor(q | 0xFF000000, Qt::MaskInColor));
 
-                imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
+                //imageDisplay->setPixmap(QPixmap::fromImage(*dilationRes));
+                //QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("Dilation")).exec();
 
                 QPainter resPaint(result);
                 resPaint.save();
@@ -310,7 +319,7 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
 
     int width = bitmap.width();
     // Маркируем первую строку. Смотрим, стоит ли что слева, для этого curveNum пригодилась
-    for (int x = 2; x < bitmap.width() - 1; x++, y1++)
+    for (int x = 2; x < bitmap.width() - 1; x++, y1++, y2++)
     {
         if (*y1 & 0x1)
         {
@@ -354,12 +363,12 @@ QImage* selectComponents(const QImage* origin, int& colorNumber)
 
     // Теперь идем по внутренней части
     QRgb *bitmapPixel;
-    bitmapPixel = (QRgb*)bitmap.scanLine(1);
-    bitmapPixel -= 2;
+    bitmapPixel = (QRgb*)bitmap.scanLine(2);
+    bitmapPixel--;
 
     y1 = (QRgb *)componentsMap->scanLine(1);
     y2 = (QRgb *)componentsMap->scanLine(2);
-    y1 -= 2; y2 -= 2;
+    y1--; y2--;
 
     for (int y = 2; y < bitmap.height() - 1; y++)
     {
