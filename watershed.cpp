@@ -104,13 +104,13 @@ QImage* imageGradient(const QImage *origin)
     delete [] gradientDenormStart;
 
     // Копируем боковые участки
-    memcpy(buffer->scanLine(0),          buffer->scanLine(1),          sizeof(uchar) * width);
-    memcpy(buffer->scanLine(height - 1), buffer->scanLine(height - 2), sizeof(uchar) * width);
+    memcpy(buffer->scanLine(0),          buffer->scanLine(1),          sizeof(QRgb) * width);
+    memcpy(buffer->scanLine(height - 1), buffer->scanLine(height - 2), sizeof(QRgb) * width);
 
-    y1 = y2 = (QRgb*)buffer->scanLine(1);
-    y3 = y4 = (QRgb*)buffer->scanLine(2) - 1;
+    y1 = y2 = (QRgb*)buffer->scanLine(0);
+    y3 = y4 = (QRgb*)buffer->scanLine(1) - 1;
     y2++; y3--;
-    for (int y = 1; y < height - 1; y++, y1 += width, y2 += width, y3 += width, y4 += width)
+    for (int y = 0; y < height; y++, y1 += width, y2 += width, y3 += width, y4 += width)
     {
         *y1 = *y2;
         *y4 = *y3;
@@ -143,9 +143,6 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
     QImage segmentationMask(gradient->width(), gradient->height(), QImage::Format_ARGB32_Premultiplied);
     segmentationMask.fill(Qt::transparent);
-
-    //imageDisplay->setPixmap(QPixmap::fromImage(*C));
-    QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("c")).exec();
 
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
@@ -240,11 +237,11 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 QImage* qSpace = new QImage(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor));
                 temp = new QImage(qSpace->convertToFormat(QImage::Format_ARGB32));
                 temp->invertPixels();
-                qSpace->setAlphaChannel(*temp);
+                //qSpace->setAlphaChannel(*temp);
                 delete temp;
 
                 imageDisplay->setPixmap(QPixmap::fromImage(*qSpace));
-                //QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
+                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
 
                 // Выделяем бассейны, которые пересекает наш новый бассейн
                 QList<QImage> qIntersec;
@@ -257,16 +254,9 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
                     qIntersec << qadd;
 
-                    imageDisplay->setPixmap(QPixmap::fromImage(qadd));
+                    //imageDisplay->setPixmap(QPixmap::fromImage(qadd));
                     //QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();
                 }
-
-                /*
-                // Вот тут альфа не выставилась
-                temp = new QImage(Qintesect->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
-                Qintesect->setAlphaChannel(*temp);
-                delete temp;
-                */
 
                 // Теперь морфология
                 QImage* dilationRes = dilation(Qintesect, *structuralElement, QColor(q | 0xFFFFFFFF), QColor(Qt::transparent));
