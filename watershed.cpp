@@ -144,6 +144,9 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     QImage segmentationMask(gradient->width(), gradient->height(), QImage::Format_ARGB32_Premultiplied);
     segmentationMask.fill(Qt::transparent);
 
+    //imageDisplay->setPixmap(QPixmap::fromImage(*C));
+    QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("c")).exec();
+
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
     QImage* Clast = new QImage(C->createMaskFromColor(0xFF000000, Qt::MaskInColor));
@@ -241,7 +244,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 delete temp;
 
                 imageDisplay->setPixmap(QPixmap::fromImage(*qSpace));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
+                //QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
 
                 // Выделяем бассейны, которые пересекает наш новый бассейн
                 QList<QImage> qIntersec;
@@ -255,7 +258,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                     qIntersec << qadd;
 
                     imageDisplay->setPixmap(QPixmap::fromImage(qadd));
-                    QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();
+                    //QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();
                 }
 
                 /*
@@ -496,25 +499,13 @@ QImage *gradientSumm(const QImage *origin, int treshhold)
 {
     QImage* gradient = imageGradient(origin);
 
-    QImage* c = new QImage(gradient->width(), gradient->height(), QImage::Format_RGB32);
-    c->fill(Qt::white);
+    QRgb* pixel = (QRgb*)gradient->bits();
+    for (int x = 0; x < gradient->width(); x++)
+        for (int y = 0; y < gradient->height(); y++, pixel++)
+            if (*pixel & 0xFF <= treshhold)
+                *pixel &= 0xFF000000;
 
-    QImage water(gradient->width(), gradient->height(), QImage::Format_RGB32);
-    water.fill(Qt::black);
-    for(int i = 0; i < treshhold; i++)
-    {
-        QRgb color = i + (i << 8) + (i << 16);
-
-        QPainter painter((QPaintDevice*)c);
-        painter.save();
-        water.setAlphaChannel(gradient->createMaskFromColor(color, Qt::MaskInColor));
-        painter.drawImage(0, 0, water);
-        water.fill(Qt::black);
-        painter.restore();
-    }
-
-    delete gradient;
-    return c;
+    return gradient;
 }
 
 
