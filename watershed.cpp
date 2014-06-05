@@ -2,7 +2,8 @@
 #include <QBitmap>
 #include <QPainter>
 #include <QSet>
-#include <QDebug>
+#include <QLabel>
+#include <QMessageBox>
 #include "watershed.h"
 
 QImage* imageGradient(const QImage *origin)
@@ -53,7 +54,7 @@ QImage* imageGradient(const QImage *origin)
     // Переходим на начало градиента
     gradientDenorm = gradientDenormStart;
 
-    float mulCoef = 255. / (max - min);
+    float mulCoef = 250. / (max - min);
 
     QRgb pixel;
 
@@ -91,7 +92,7 @@ int hsvValue(QRgb color)
 }
 
 
-QImage* watershed(const QImage *origin, const int& threshold)
+QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold)
 {
     int colorChange = 1;
     QImage* gradient = imageGradient(origin);
@@ -101,7 +102,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
 
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
-    QImage* Clast = new QImage(C->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+    QImage* Clast = new QImage(C->createMaskFromColor(0xFF000000, Qt::MaskInColor));
     delete C;
     C = new QImage(*Clast);
 
@@ -110,6 +111,10 @@ QImage* watershed(const QImage *origin, const int& threshold)
     QImage* Qlast = selectComponents(Clast, colorNumLast);
     int colorNum;
     QImage* Q;
+
+    // Пересечение бассейнов
+    // TODO а не будет ли это лишь T?
+    QImage* Qintesect;
 
     // Цвет/уровень воды. Текущее значение градиента
     QRgb color = threshold + 1;
@@ -123,20 +128,31 @@ QImage* watershed(const QImage *origin, const int& threshold)
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
-    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101 * colorChange)
+    int allNumbers = 0;
+
+    imageDisplay->setPixmap(QPixmap::fromImage(*C));
+
+    QMessageBox(QMessageBox::NoIcon, QString("Что-то"), QString("Перед итерацией")).exec();
+
+    for (int colorI = threshold + 1; colorI < 256; colorI += colorChange, color += 0x010101 * colorChange)
     {
-        T = new QImage(gradient->createMaskFromColor(color));
+        T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor));
 
         // Объединяем С и T
         QPainter painter(C);
         painter.save();
         temp = new QImage(*T);
 
+        T->fill(Qt::white);
         T->setAlphaChannel(*temp);
         painter.drawImage(0, 0, *T);
 
         delete temp;
         painter.restore();
+
+        imageDisplay->setPixmap(QPixmap::fromImage(*C));
+
+        QMessageBox(QMessageBox::NoIcon, QString("Что-то"), QString("Во время итерации")).exec();
 
         // Выделяем связные компоненты
         Q = selectComponents(C, colorNum);
@@ -173,15 +189,32 @@ QImage* watershed(const QImage *origin, const int& threshold)
         ///
         /////////////////////////////////////////////////////////////////////////////
 
+        // Строим пересечение двух связных компонент
+        // Сначало создаем пересечение
+        Qintesect = new QImage(*Q);
+        Qintesect->setAlphaChannel(*Q);
+
+        // Альфа-канал для пересечения
+        temp = new QImage(*Clast);
+        Clast->setAlphaChannel(*temp);
+        delete temp;
+
+        // Собственно пересечение
+        QPainter painterIntersec(Qintesect);
+        painterIntersec.save();
+        painterIntersec.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+        painterIntersec.drawImage(0, 0, *Clast);
+        painterIntersec.restore();
+
         // Проверяем, что делать. Ставить ли перегородку и прочее
         // Если у нас по одному пересечению, то ничего не делаем. Это лишь капля в море
         // А если связный компонент пересекает несколько
 
         for (int q = 0; q < colorNum; q++)
         {
-            if (intersectionComponents[q].size() > 0)
+            if (intersectionComponents[q].size() > 1)
             {
-                //
+                allNumbers++;
             }
         }
 
@@ -193,6 +226,8 @@ QImage* watershed(const QImage *origin, const int& threshold)
         delete Clast;
         Clast = new QImage(*C);
     }
+
+    qDebug(QString("AllNumbers %1").arg(allNumbers).toStdString().c_str());
 
     delete Qlast;
     delete Clast;
@@ -427,7 +462,7 @@ QImage *displayComponents(const QImage *origin)
     int colorNumber;
     QImage* componentsMap = selectComponents(origin, colorNumber);
 
-    float dc = 255./ (colorNumber + 1);
+    float dc = 254./ (colorNumber + 1);
 
     for (int i = 0; i < colorNumber; i++)
     {

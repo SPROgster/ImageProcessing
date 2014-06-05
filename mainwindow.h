@@ -87,6 +87,8 @@ private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;
     QList<imageEntry*> historyList;
+
+    friend QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold);
 };
 
 #endif // MAINWINDOW_H
