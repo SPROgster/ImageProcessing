@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include "watershed.h"
+#include "structuralElements.h"
 
 QImage* imageGradient(const QImage *origin)
 {
@@ -94,11 +95,13 @@ int hsvValue(QRgb color)
 
 QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold)
 {
-    int colorChange = 5;
     QImage* gradient = imageGradient(origin);
     int width = gradient->width();
     int height= gradient->height();
     QImage* temp;
+
+    QImage segmentationMask(gradient->width(), gradient->height(), QImage::Format_ARGB32_Premultiplied);
+    segmentationMask.fill(Qt::transparent);
 
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
@@ -115,10 +118,11 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     // Пересечение бассейнов
     // TODO а не будет ли это лишь T?
     QImage* Qintesect;
+    QImage* structuralElement = square(3, 0xFFFFFFFF);
 
     // Цвет/уровень воды. Текущее значение градиента
     QRgb color = threshold + 1;
-    color += (color << 8) + (color << 16) + 0xFF000000;
+    color += (color << 8) + (color << 16) | 0x000000;
 
     // Маска с точками с параметром градиента равным color
     QImage* T;
@@ -130,11 +134,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
     int allNumbers = 0;
 
-    imageDisplay->setPixmap(QPixmap::fromImage(*C));
-
-    QMessageBox(QMessageBox::NoIcon, QString("Что-то"), QString("Перед итерацией")).exec();
-
-    for (int colorI = threshold + 1; colorI < 256; colorI += colorChange, color += 0x010101 * colorChange)
+    for (int colorI = threshold + 1; colorI < 256; colorI++, color += 0x010101)
     {
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor));
 
@@ -143,16 +143,11 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         painter.save();
         temp = new QImage(*T);
 
-        T->fill(Qt::white);
         T->setAlphaChannel(*temp);
         painter.drawImage(0, 0, *T);
 
         delete temp;
         painter.restore();
-
-        imageDisplay->setPixmap(QPixmap::fromImage(*C));
-
-        QMessageBox(QMessageBox::NoIcon, QString("Что-то"), QString("Во время итерации")).exec();
 
         // Выделяем связные компоненты
         Q = selectComponents(C, colorNum);
@@ -189,34 +184,39 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         ///
         /////////////////////////////////////////////////////////////////////////////
 
-        // Строим пересечение двух связных компонент
-        // Сначало создаем пересечение
-        Qintesect = new QImage(*Q);
-        Qintesect->setAlphaChannel(*Q);
-
-        // Альфа-канал для пересечения
-        temp = new QImage(*Clast);
-        Clast->setAlphaChannel(*temp);
-        delete temp;
-
-        // Собственно пересечение
-        QPainter painterIntersec(Qintesect);
-        painterIntersec.save();
-        painterIntersec.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-        painterIntersec.drawImage(0, 0, *Clast);
-        painterIntersec.restore();
 
         // Проверяем, что делать. Ставить ли перегородку и прочее
         // Если у нас по одному пересечению, то ничего не делаем. Это лишь капля в море
         // А если связный компонент пересекает несколько
 
         for (int q = 0; q < colorNum; q++)
-        {
             if (intersectionComponents[q].size() > 1)
             {
-                allNumbers++;
+                // Строим пересечение двух связных компонент
+                // Сначало создаем пересечение
+                Qintesect = new QImage(*Q);
+                Qintesect->setAlphaChannel(Qintesect->createMaskFromColor(q | 0xFF000000, Qt::MaskInColor));
+
+                // Альфа-канал для пересечения
+                temp = new QImage(*Clast);
+                Clast->setAlphaChannel(*temp);
+                delete temp;
+
+                // Собственно пересечение
+                QPainter painterIntersec(Qintesect);
+                painterIntersec.save();
+                painterIntersec.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+                painterIntersec.drawImage(0, 0, *Clast);
+                painterIntersec.restore();
+
+                Qintesect->setAlphaChannel(Qintesect->createMaskFromColor(0xFF000000, Qt::MaskOutColor));
+
+                // Теперь морфология
+
+
+                imageDisplay->setPixmap(QPixmap::fromImage(*Qintesect));
+                QMessageBox(QMessageBox::NoIcon, QString("fd"), QString("Пересечение двух")).exec();
             }
-        }
 
         // Удаляем Т и пересчитываем связные компоненты у C
         delete T;

@@ -3,9 +3,9 @@
 
 // Морфологические операции
 QImage *erosion(QImage *origin, const QImage &element, const QColor pixelColor,
-                const QColor background = QColor(Qt::white));
+                const QColor background = QColor(Qt::transparent));
 QImage *dilation(QImage *origin, const QImage &element, const QColor pixelColor,
-                const QColor background = QColor(Qt::white));
+                const QColor background = QColor(Qt::transparent));
 // наращивание
 /*QImage *opening     (QImage *origin, QImage *element);*/
 QImage *closing(QImage *origin, QImage *element, const QColor pixelColor,
