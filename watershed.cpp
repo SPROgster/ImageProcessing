@@ -185,6 +185,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
             painterC.drawImage(0, 0, *T);
 
             painterC.restore();
+            painterC.end();
         }
 
         // Выделяем связные компоненты
@@ -237,39 +238,40 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 delete temp;
 
                 // Выделяем бассейны, которые пересекает наш новый бассейн
-                QList<QImage> qIntersec;
+                QList<QImage*> qIntersec;
+                qIntersec.clear();
 
                 QRgb qin;
                 foreach(qin, intersectionComponents[q])
                 {
-                    QImage qadd = Qlast->createMaskFromColor(qin | 0xFF000000, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied);
-                    qadd.setAlphaChannel(qadd);
+                    QImage* qadd = new QImage(Qlast->createMaskFromColor(qin | 0xFF000000, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
+                    qadd->setAlphaChannel(*qadd);
 
                     qIntersec << qadd;
                 }
 
                 //////////////////////////////////////////////////////////////////////
                 /// Бассейны есть, теперь будем делать морфологию, чтобы различать
-                QList<QImage> qIntersecLast;
+                QList<QImage*> qIntersecLast;
+
+                qIntersecLast.clear();
+                qIntersecLast.reserve(qIntersec.size());
 
                 bool flag = true;
                 while (flag)
                 {
-                    qIntersecLast.clear();
                     // Морфологически расширяем все бассейны
-                    for (QList<QImage>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
+                    for (QList<QImage*>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
                     {
                         // Для начала сохраняем предыдущую версию, чтобы было с чем сравнивать
-                        qIntersecLast << QImage(*qin);
+                        qIntersecLast << *qin;
 
                         // Порфологически нарасщиваем
                         /// DEBUG тут мы видем, что морфология нарасчивает чуть больше, чем надо бы...
-                        QImage* dilationRes = dilation(&(*qin), *structuralElement, QColor(0xFFFFFFFF), QColor(Qt::transparent));
+                        QImage* dilationRes = dilation(*qin, *structuralElement, QColor(0xFFFFFFFF), QColor(Qt::transparent));
 
                         // Отрезаем часть не принадлежащую q
-                        QImage increased(*dilationRes);
-
-                        QPainter painterAnd(&increased);
+                        QPainter painterAnd(dilationRes);
                         painterAnd.save();
                         painterAnd.setRenderHint(QPainter::Antialiasing, false);
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
@@ -277,21 +279,21 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                         painterAnd.restore();
 
                         // Делаем его активным
-                        *qin = increased;
+                        *qin = dilationRes;
                     }
 
                     // Теперь смотрим на взаимное пересечение
-                    for (QList<QImage>::iterator qin1 = qIntersec.begin(); qin1 != qIntersec.end() - 1; qin1++)
-                        for (QList<QImage>::iterator qin2 = qin1 + 1; qin2 != qIntersec.end(); qin2++)
+                    for (QList<QImage*>::iterator qin1 = qIntersec.begin(); qin1 != qIntersec.end() - 1; qin1++)
+                        for (QList<QImage*>::iterator qin2 = qin1 + 1; qin2 != qIntersec.end(); qin2++)
                         {
-                            QImage crossIntersection(*qin1);
+                            QImage crossIntersection(**qin1);
 
                             {
                                 QPainter painterAnd(&crossIntersection);
                                 painterAnd.save();
                                 painterAnd.setRenderHint(QPainter::Antialiasing, false);
                                 painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-                                painterAnd.drawImage(0, 0, *qin2);
+                                painterAnd.drawImage(0, 0, **qin2);
                                 painterAnd.restore();
                             }
 
@@ -305,26 +307,29 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                         }
 
                     // Теперь для всех удаляем новую границу
-                    for (QList<QImage>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
+                    for (QList<QImage*>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
                     {
-                        QImage withoutBorder(*qin);
-
-                        QPainter painterAnd(&withoutBorder);
+                        QPainter painterAnd(*qin);
                         painterAnd.save();
                         painterAnd.setRenderHint(QPainter::Antialiasing, false);
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
                         painterAnd.drawImage(0, 0, *border);
                         painterAnd.restore();
-
-                        *qin = withoutBorder;
                     }
 
                     int i;
                     for (i = 0; i < qIntersecLast.size() && flag; i++)
-                        flag = (qIntersecLast[i] == qIntersec[i]);
+                        flag = (*(qIntersecLast[i]) == *(qIntersec[i]));
 
                     flag = !flag;
+
+                    for (QList<QImage*>::iterator qin = qIntersecLast.begin(); qin != qIntersecLast.end(); qin++)
+                        delete *qin;
+                    qIntersecLast.clear();
+                    qIntersecLast.reserve(qIntersec.size());
                 }
+                for (QList<QImage*>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
+                    delete *qin;
                 ///
                 //////////////////////////////////////////////////////////////////////
 
@@ -339,7 +344,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
                 QRgb* borderPixel = (QRgb*)inversedBorder.bits();
                 QRgb* cPixel      = (QRgb*)C->bits();
-                for (int i = 0; i < C->byteCount() / sizeof(QRgb); i++, borderPixel++, cPixel++)
+                for (uint i = 0; i < C->byteCount() / sizeof(QRgb); i++, borderPixel++, cPixel++)
                 {
                     if (*borderPixel & 0xFF000000)
                         *cPixel = *borderPixel;
@@ -367,7 +372,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         Qlast = selectComponents(C, colorNumLast);
 
         delete Clast;
-        Clast = C;
+        Clast = new QImage(*C);
     }
 
     delete Qlast;
