@@ -174,17 +174,15 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
 
         // Объединяем С и T
-        {
-            QPainter painterC(C);
-            painterC.save();
-            temp = new QImage(*T);
+        QPainter painterC(C);
+        painterC.save();
+        temp = new QImage(*T);
 
-            T->setAlphaChannel(*temp);
-            painterC.drawImage(0, 0, *T);
+        T->setAlphaChannel(*temp);
+        painterC.drawImage(0, 0, *T);
 
-            delete temp;
-            painterC.restore();
-        }
+        delete temp;
+        painterC.restore();
 
         // Выделяем связные компоненты
         Q = selectComponents(C, colorNum);
@@ -333,26 +331,29 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 /// Добавляем новую границу в C. Ведь мы градиет использует только для
                 /// получения новых T. А по C мы смотрим разделения
 
-                imageDisplay->setPixmap(QPixmap::fromImage(*C));
-                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Старое С")).exec();
-
                 QImage inversedBorder(*border);
                 inversedBorder.invertPixels();
 
-                imageDisplay->setPixmap(QPixmap::fromImage(inversedBorder));
-                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Граница")).exec();
+                QRgb* borderPixel = (QRgb*)inversedBorder.bits();
+                QRgb* cPixel      = (QRgb*)C->bits();
+                for (int i = 0; i < C->byteCount() / sizeof(QRgb); i++, borderPixel++, cPixel++)
+                {
+                    if (*borderPixel & 0xFF000000)
+                        *cPixel = *borderPixel;
+                }
 
-                QPainter painter(C);
-
-                painter.save();
-                painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+                //////////////////////////////////////////////////////////////////////
+                ///
+                ///
+                ///     Тут фигня какая-то
+                ///
+                ///
+                //////////////////////////////////////////////////////////////////////
+                /*painterC.save();
+                painterC.setCompositionMode(QPainter::CompositionMode_SourceOver);
                 /// DEBUG тут какая то фигня происходит
-                painter.drawImage(0, 0, inversedBorder.convertToFormat(QImage::Format_ARGB32_Premultiplied));
-                painter.restore();
-
-                imageDisplay->setPixmap(QPixmap::fromImage(*C));
-                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Новое С")).exec();
-
+                painterC.drawImage(0, 0, inversedBorder);
+                painterC.restore();*/
                 ///
                 //////////////////////////////////////////////////////////////////////
             }
@@ -368,6 +369,8 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
     delete Qlast;
     delete Clast;
+
+    replaceColor(border, 0xFFFFFFFF, 0xFFFF0000);
 
     return border;
 }
