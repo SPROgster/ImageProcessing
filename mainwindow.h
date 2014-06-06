@@ -43,6 +43,7 @@ private slots:
     void giveWaterSlot();
     void executeWatershed();
     void selectConectedSlot();
+    void gradientPreviewSlot();
 
 private:
     void loadImage();

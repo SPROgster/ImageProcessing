@@ -132,7 +132,7 @@ int hsvValue(QRgb color)
 }
 
 
-QImage* watershed(const QImage *origin, const int& threshold)
+QImage* watershed(QImage const *origin, const int& threshold)
 {
     QProgressDialog progress;
     progress.setLabelText(QString("Алгоритм водораздела"));
@@ -140,6 +140,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
     progress.setMaximum(255);
     progress.setWindowModality(Qt::WindowModal);\
     progress.setValue(threshold);
+    progress.raise();
 
     QImage* gradient = imageGradient(origin);
     int width = origin->width();
@@ -179,6 +180,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
     for (int colorI = threshold + 1; colorI < 255 && !progress.wasCanceled(); colorI++, color += 0x010101)
     {
         progress.setValue(colorI);
+        progress.repaint();
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
         temp = new QImage(*T);
 
@@ -285,6 +287,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
                         painterAnd.drawImage(0, 0, *qSpace);
                         painterAnd.restore();
+                        painterAnd.end();
 
                         // Делаем его активным
                         *qin = dilationRes;
@@ -303,6 +306,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
                                 painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationIn);
                                 painterAnd.drawImage(0, 0, **qin2);
                                 painterAnd.restore();
+                                painterAnd.end();
                             }
 
                             {
@@ -311,6 +315,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
                                 borderAdd.setRenderHint(QPainter::Antialiasing, false);
                                 borderAdd.drawImage(0, 0, crossIntersection);
                                 borderAdd.restore();
+                                borderAdd.end();
                             }
                         }
 
@@ -323,6 +328,7 @@ QImage* watershed(const QImage *origin, const int& threshold)
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
                         painterAnd.drawImage(0, 0, *border);
                         painterAnd.restore();
+                        painterAnd.end();
                     }
 
                     int i;

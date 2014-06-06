@@ -61,7 +61,7 @@
            <x>0</x>
            <y>0</y>
            <width>556</width>
-           <height>422</height>
+           <height>423</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
@@ -220,9 +220,16 @@
          </widget>
         </item>
         <item>
-         <widget class="QLCDNumber" name="lcdNumber">
-          <property name="digitCount">
-           <number>3</number>
+         <widget class="QSpinBox" name="lcdNumber">
+          <property name="maximum">
+           <number>254</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="buttonPreview">
+          <property name="text">
+           <string>Проверить границу</string>
           </property>
          </widget>
         </item>
@@ -238,7 +245,7 @@
      <x>0</x>
      <y>0</y>
      <width>682</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -316,8 +323,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>100</width>
-          <height>432</height>
+          <width>103</width>
+          <height>436</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">

@@ -7,6 +7,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "watershed.h"
+
 #include "imageentry.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -24,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionGiveWater, SIGNAL(triggered()), this, SLOT(giveWaterSlot()));
     connect(ui->actionWaterShed, SIGNAL(triggered()), this, SLOT(executeWatershed()));
     connect(ui->actionSelectConected, SIGNAL(triggered()), this, SLOT(selectConectedSlot()));
+    connect(ui->buttonPreview, SIGNAL(clicked()), this, SLOT(gradientPreviewSlot()));
 
     image = new QImage();
 
@@ -121,7 +124,7 @@ void MainWindow::giveWaterSlot()
     {
         QRgb color = i + (i << 8) + (i << 16);
 
-        ui->lcdNumber->display(i);
+        ui->lcdNumber->setValue(i);
 
         QPainter painter(&c);
         painter.save();
@@ -138,7 +141,7 @@ void MainWindow::giveWaterSlot()
 
 void MainWindow::executeWatershed()
 {
-    QImage* res = watershed(image, 160);
+    QImage* res = watershed(image, ui->lcdNumber->value());
     if (res)
     {
         QPainter drawBorders(image);
@@ -162,6 +165,14 @@ void MainWindow::selectConectedSlot()
     image = newImage;
 
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
+}
+
+void MainWindow::gradientPreviewSlot()
+{
+    QImage* gradient = gradientSumm(image, ui->lcdNumber->value());
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*gradient));
+    delete gradient;
 }
 
 //
