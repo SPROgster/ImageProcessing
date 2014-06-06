@@ -138,7 +138,7 @@ void MainWindow::giveWaterSlot()
 
 void MainWindow::executeWatershed()
 {
-    QImage* res = watershed(image, ui->imageView, 160);
+    QImage* res = watershed(image, ui->imageView, 20);
     delete image;
     image = res;
 

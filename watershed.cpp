@@ -172,17 +172,20 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     for (int colorI = threshold + 1; colorI < 255; colorI++, color += 0x010101)
     {
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
-
-        // Объединяем С и T
-        QPainter painterC(C);
-        painterC.save();
         temp = new QImage(*T);
 
         T->setAlphaChannel(*temp);
-        painterC.drawImage(0, 0, *T);
-
         delete temp;
-        painterC.restore();
+
+        // Объединяем С и T
+        {
+            QPainter painterC(C);
+            painterC.save();
+
+            painterC.drawImage(0, 0, *T);
+
+            painterC.restore();
+        }
 
         // Выделяем связные компоненты
         Q = selectComponents(C, colorNum);
@@ -364,7 +367,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
         Qlast = selectComponents(C, colorNumLast);
 
         delete Clast;
-        Clast = new QImage(*C);
+        Clast = C;
     }
 
     delete Qlast;
