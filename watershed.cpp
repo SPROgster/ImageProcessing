@@ -231,11 +231,9 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 // Выделяем весь бассейн q
                 QImage* qSpace = new QImage(Q->createMaskFromColor((q + 1) | 0xFF000000, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
                 temp = new QImage(*qSpace);
-                //temp->invertPixels();
+                temp->invertPixels();
                 qSpace->setAlphaChannel(*temp);
                 delete temp;
-
-                /// Debug Q и С если равны, то выделяется правильно
 
                 imageDisplay->setPixmap(QPixmap::fromImage(*C));
                 QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
@@ -255,7 +253,6 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                     /*imageDisplay->setPixmap(QPixmap::fromImage(qadd));
                     QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();*/
                 }
-                /// Debug q с предыдущего шага выделяются так же правильно
 
                 //////////////////////////////////////////////////////////////////////
                 /// Бассейны есть, теперь будем делать морфологию, чтобы различать
@@ -281,14 +278,8 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                         QPainter painterAnd(&increased);
                         painterAnd.save();
                         painterAnd.setRenderHint(QPainter::Antialiasing, false);
-
-                        imageDisplay->setPixmap(QPixmap::fromImage(increased));
-                        QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Расширенное")).exec();
-                        /// DEBUG тут мы видем, что q не отрезается правильно
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
                         painterAnd.drawImage(0, 0, *qSpace);
-                        imageDisplay->setPixmap(QPixmap::fromImage(increased));
-                        QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Ограниченное q")).exec();
                         painterAnd.restore();
 
                         // Делаем его активным
