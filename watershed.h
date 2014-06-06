@@ -4,7 +4,7 @@
 int hsvValue(QRgb color);
 QImage* imageGradient(const QImage* origin);
 QImage* gradientSumm(const QImage* origin, unsigned int treshhold);
-QImage* watershed(const QImage* origin, QLabel *imageDisplay, const int &threshold = 0);
+QImage* watershed(const QImage* origin, const int &threshold = 0);
 
 void replaceColor(QImage* image, const QRgb colorToReplace, const QRgb newColor);
 

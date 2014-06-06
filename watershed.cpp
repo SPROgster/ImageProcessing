@@ -3,7 +3,7 @@
 #include <QPainter>
 #include <QSet>
 #include <QLabel>
-#include <QMessageBox>
+#include <QProgressDialog>
 #include "watershed.h"
 #include "morphology.h"
 #include "structuralElements.h"
@@ -132,8 +132,15 @@ int hsvValue(QRgb color)
 }
 
 
-QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold)
+QImage* watershed(const QImage *origin, const int& threshold)
 {
+    QProgressDialog progress;
+    progress.setLabelText(QString("Алгоритм водораздела"));
+    progress.setMinimum(threshold);
+    progress.setMaximum(255);
+    progress.setWindowModality(Qt::WindowModal);\
+    progress.setValue(threshold);
+
     QImage* gradient = imageGradient(origin);
     int width = origin->width();
     int height= origin->height();
@@ -169,8 +176,9 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
     // Больше чем изначально было, быть не может. Или может?
     intersectionComponents.reserve(colorNumLast);
 
-    for (int colorI = threshold + 1; colorI < 255; colorI++, color += 0x010101)
+    for (int colorI = threshold + 1; colorI < 255 && !progress.wasCanceled(); colorI++, color += 0x010101)
     {
+        progress.setValue(colorI);
         T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
         temp = new QImage(*T);
 
@@ -373,6 +381,11 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
         delete Clast;
         Clast = new QImage(*C);
+    }
+
+    if (progress.wasCanceled())
+    {
+        return 0;
     }
 
     delete Qlast;
