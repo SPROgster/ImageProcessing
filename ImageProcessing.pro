@@ -16,12 +16,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     imageentry.cpp \
     structuralElements.cpp \
-    progressiveCut.cpp
+    progressiveCut.cpp \
+    gmm.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
-    progressiveCut.h
+    progressiveCut.h \
+    gmm.h
 
 FORMS    += mainwindow.ui
 
