@@ -1,5 +1,8 @@
 #include <math.h>
 #include <QColor>
+#include <QImage>
+
+#include "progressiveCut.h"
 
 inline float
 distance(int x1, int y1, int x2, int y2)
@@ -10,11 +13,11 @@ distance(int x1, int y1, int x2, int y2)
 inline float
 norma2(const QColor a, const QColor b)
 {
-    int r = a.red()   - b.red();
-    int g = a.green() - b.green();
-    int b = a.blue()  - b.blue();
+    int red  = a.red()   - b.red();
+    int green= a.green() - b.green();
+    int blue = a.blue()  - b.blue();
 
-    return (r * r + g * g + b * b);
+    return (red * red + green * green + blue * blue);
 }
 
 float
@@ -24,4 +27,15 @@ Bpq(const QColor a, const int xa, const int ya, const QColor b, const int xb, co
     res = exp(res) / distance(xa, ya, xb, yb);
 
     return res;
+}
+
+
+Graph *createGraph(const QImage &image)
+{
+    int size = image.width() * image.height();
+
+    Graph* graph = new Graph[size];
+    memset(graph, 0, sizeof(Graph) * size);
+
+    return graph;
 }
