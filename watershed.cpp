@@ -135,20 +135,18 @@ int hsvValue(QRgb color)
 QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& threshold)
 {
     QImage* gradient = imageGradient(origin);
-    int width = gradient->width();
-    int height= gradient->height();
+    int width = origin->width();
+    int height= origin->height();
     QImage* temp;
 
     QImage* border = new QImage(width, height, QImage::Format_ARGB32_Premultiplied);
-
-    QImage segmentationMask(gradient->width(), gradient->height(), QImage::Format_ARGB32_Premultiplied);
-    segmentationMask.fill(Qt::transparent);
+    border->fill(Qt::transparent);
 
     // Бассейны. Текущий и для предыдущего уровня
     QImage* C = gradientSumm(origin, threshold);
     QImage* Clast = new QImage(C->createMaskFromColor(0x000000, Qt::MaskInColor));
     delete C;
-    C = new QImage(*Clast);
+    C = new QImage(Clast->convertToFormat(QImage::Format_ARGB32_Premultiplied));
 
     // Компоненты связности для n - 1 и n
     int colorNumLast;
@@ -173,18 +171,20 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
 
     for (int colorI = threshold + 1; colorI < 255; colorI++, color += 0x010101)
     {
-        T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor));
+        T = new QImage(gradient->createMaskFromColor(color, Qt::MaskInColor).convertToFormat(QImage::Format_ARGB32_Premultiplied));
 
         // Объединяем С и T
-        QPainter painter(C);
-        painter.save();
-        temp = new QImage(*T);
+        {
+            QPainter painterC(C);
+            painterC.save();
+            temp = new QImage(*T);
 
-        T->setAlphaChannel(*temp);
-        painter.drawImage(0, 0, *T);
+            T->setAlphaChannel(*temp);
+            painterC.drawImage(0, 0, *T);
 
-        delete temp;
-        painter.restore();
+            delete temp;
+            painterC.restore();
+        }
 
         // Выделяем связные компоненты
         Q = selectComponents(C, colorNum);
@@ -235,10 +235,6 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                 qSpace->setAlphaChannel(*temp);
                 delete temp;
 
-                imageDisplay->setPixmap(QPixmap::fromImage(*C));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
-                imageDisplay->setPixmap(QPixmap::fromImage(*qSpace));
-                QMessageBox(QMessageBox::NoIcon, QString("Дилатиация"), QString("qSpace q = %1").arg(q + 1, 0, 16)).exec();
                 // Выделяем бассейны, которые пересекает наш новый бассейн
                 QList<QImage> qIntersec;
 
@@ -249,17 +245,14 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                     qadd.setAlphaChannel(qadd);
 
                     qIntersec << qadd;
-
-                    /*imageDisplay->setPixmap(QPixmap::fromImage(qadd));
-                    QMessageBox(QMessageBox::NoIcon, QString("Бассейн"), QString("Бассейн пересекающего q = %1").arg(q + 1, 0, 16)).exec();*/
                 }
 
                 //////////////////////////////////////////////////////////////////////
                 /// Бассейны есть, теперь будем делать морфологию, чтобы различать
                 QList<QImage> qIntersecLast;
 
-                /*bool flag = true;
-                while (flag)*/
+                bool flag = true;
+                while (flag)
                 {
                     qIntersecLast.clear();
                     // Морфологически расширяем все бассейны
@@ -287,7 +280,7 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                     }
 
                     // Теперь смотрим на взаимное пересечение
-                    /*for (QList<QImage>::iterator qin1 = qIntersec.begin(); qin1 != qIntersec.end() - 1; qin1++)
+                    for (QList<QImage>::iterator qin1 = qIntersec.begin(); qin1 != qIntersec.end() - 1; qin1++)
                         for (QList<QImage>::iterator qin2 = qin1 + 1; qin2 != qIntersec.end(); qin2++)
                         {
                             QImage crossIntersection(*qin1);
@@ -296,28 +289,22 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                                 QPainter painterAnd(&crossIntersection);
                                 painterAnd.save();
                                 painterAnd.setRenderHint(QPainter::Antialiasing, false);
-                                painterAnd.setCompositionMode(QPainter::RasterOp_SourceAndDestination);
+                                painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationIn);
                                 painterAnd.drawImage(0, 0, *qin2);
                                 painterAnd.restore();
-                                imageDisplay->setPixmap(QPixmap::fromImage(*qin1));
-                                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("1")).exec();
-                                imageDisplay->setPixmap(QPixmap::fromImage(*qin2));
-                                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("2")).exec();
-                                imageDisplay->setPixmap(QPixmap::fromImage(crossIntersection));
-                                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("3")).exec();
                             }
 
                             {
-                                QPainter borderAdd(&newBorderPart);
+                                QPainter borderAdd(border);
                                 borderAdd.save();
                                 borderAdd.setRenderHint(QPainter::Antialiasing, false);
                                 borderAdd.drawImage(0, 0, crossIntersection);
                                 borderAdd.restore();
                             }
-                        }*/
+                        }
 
                     // Теперь для всех удаляем новую границу
-                    /*for (QList<QImage>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
+                    for (QList<QImage>::iterator qin = qIntersec.begin(); qin != qIntersec.end(); qin++)
                     {
                         QImage withoutBorder(*qin);
 
@@ -325,31 +312,49 @@ QImage* watershed(const QImage *origin, QLabel* imageDisplay, const int& thresho
                         painterAnd.save();
                         painterAnd.setRenderHint(QPainter::Antialiasing, false);
                         painterAnd.setCompositionMode(QPainter::CompositionMode_DestinationOut);
-                        painterAnd.drawImage(0, 0, newBorderPart);
+                        painterAnd.drawImage(0, 0, *border);
                         painterAnd.restore();
 
                         *qin = withoutBorder;
-                    }
-
-                    // Добавляем новую границу к списку границ
-                    {
-                        QPainter painterAdd(border);
-                        painterAdd.save();
-                        painterAdd.setRenderHint(QPainter::Antialiasing, false);
-                        painterAdd.drawImage(0, 0, newBorderPart);
-                        painterAdd.restore();
                     }
 
                     int i;
                     for (i = 0; i < qIntersecLast.size() && flag; i++)
                         flag = (qIntersecLast[i] == qIntersec[i]);
 
-                    flag = !flag;*/
+                    flag = !flag;
                 }
                 ///
                 //////////////////////////////////////////////////////////////////////
 
                 delete qSpace;
+
+                //////////////////////////////////////////////////////////////////////
+                /// Добавляем новую границу в C. Ведь мы градиет использует только для
+                /// получения новых T. А по C мы смотрим разделения
+
+                imageDisplay->setPixmap(QPixmap::fromImage(*C));
+                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Старое С")).exec();
+
+                QImage inversedBorder(*border);
+                inversedBorder.invertPixels();
+
+                imageDisplay->setPixmap(QPixmap::fromImage(inversedBorder));
+                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Граница")).exec();
+
+                QPainter painter(C);
+
+                painter.save();
+                painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+                /// DEBUG тут какая то фигня происходит
+                painter.drawImage(0, 0, inversedBorder.convertToFormat(QImage::Format_ARGB32_Premultiplied));
+                painter.restore();
+
+                imageDisplay->setPixmap(QPixmap::fromImage(*C));
+                QMessageBox(QMessageBox::NoIcon, QString("Пересечение"), QString("Новое С")).exec();
+
+                ///
+                //////////////////////////////////////////////////////////////////////
             }
 
         // Удаляем Т и пересчитываем связные компоненты у C
