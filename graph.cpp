@@ -9,7 +9,7 @@ Graph::Graph(unsigned int width_, unsigned int height_)
 
     if (width && height)
     {
-        notes.reserve(width*height);
+        notes.reserve(width * height);
 
         for (unsigned int y = 0; y < height; y++)
             for (unsigned int x = 0; x < width; x++)

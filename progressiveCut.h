@@ -1,8 +1,40 @@
 #ifndef PROGRESSIVECUT_H
 #define PROGRESSIVECUT_H
-#include <QColor>
 
-float Bpq(const QColor a, const int xa, const int ya, const QColor b, const int xb, const int yb, const float delta);
+#include <QImage>
+#include <QVector>
+#include <math.h>
+
+#include "graph.h"
+
+class ProgressiveCut
+{
+private:
+    Graph* graph;
+    QImage* image;
+    QImage* foregroundSelection;
+    QImage* backgroundSelection;
+
+    QVector<QRgb> maskColorTable;
+
+    int imageWidth, imageHeight;
+
+    void initMaskColorTable();
+
+    void createGraph();
+
+public:
+    ProgressiveCut();
+    ProgressiveCut(const QImage& imageToCut);
+    ~ProgressiveCut();
+
+    void setImage(const QImage& imageToCut);
+    bool setForeground(const QImage& foreground);
+    bool setBackground(const QImage& background);
+};
+
+float
+Bpq(const QColor a, const int xa, const int ya, const QColor b, const int xb, const int yb, const float delta);
 
 inline float
 distance(int x1, int y1, int x2, int y2)
