@@ -26,6 +26,7 @@ private:
         void weightTo(int x, int y, float weight);
         void weightToBegin(float weight);
         void weightToEnd(float weight);
+        void weightToBeginAndEnd(float weightBegin_, float weightEnd_);
 
         // Добавить создание маски разбиения или объектов/фона
 
@@ -53,6 +54,7 @@ public:
     void weightTo(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, float weight);
     void weightToBegin(unsigned int x, unsigned int y, float weight);
     void weightToEnd(unsigned int x, unsigned int y, float weight);
+    void weightToBeginAndEnd(unsigned int x, unsigned int y, float weightBegin, float weightEnd);
 
     friend class GraphNote;
 };

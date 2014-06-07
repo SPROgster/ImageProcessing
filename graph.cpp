@@ -80,6 +80,12 @@ void Graph::weightToEnd(unsigned int x, unsigned int y, float weight)
     notes[coord]->weightToEnd(weight);
 }
 
+void Graph::weightToBeginAndEnd(unsigned int x, unsigned int y, float weightBegin, float weightEnd)
+{
+    unsigned int coord = x + y * width;
+    notes[coord]->weightToBeginAndEnd(weightBegin, weightEnd);
+}
+
 
 Graph::GraphNote::GraphNote(int x_, int y_)
 {
@@ -147,6 +153,17 @@ void Graph::GraphNote::weightToBegin(float weight)
 void Graph::GraphNote::weightToEnd(float weight)
 {
     weightEnd = weight;
+    linkToEnd = true;
+    isCutedEnd = false;
+}
+
+void Graph::GraphNote::weightToBeginAndEnd(float weightBegin_, float weightEnd_)
+{
+    weightBegin = weightBegin_;
+    linkToBegin = true;
+    isCutedBegin = false;
+
+    weightEnd = weightEnd_;
     linkToEnd = true;
     isCutedEnd = false;
 }
