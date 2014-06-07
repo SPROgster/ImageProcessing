@@ -12,14 +12,3 @@ Bpq(const QColor a, const int xa, const int ya, const QColor b, const int xb, co
 
     return res;
 }
-
-
-Graph *createGraph(const QImage &image)
-{
-    int size = image.width() * image.height();
-
-    Graph* graph = new Graph[size];
-    memset(graph, 0, sizeof(Graph) * size);
-
-    return graph;
-}
