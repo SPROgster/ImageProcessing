@@ -3,16 +3,19 @@
 
 #include <QColor>
 
-const QRgb segmentUnknown = 0;
-const QRgb segmentForeground = 1;
-const QRgb segmentBackground = 2;
+struct Rgb
+{
+    int red, green, blue;
+};
+
+struct RgbF
+{
+    float redF, greenF, blueF;
+};
 
 struct Gaussian
 {
-    struct
-    {
-        qreal redF, greenF, blueF;
-    } mu;					// mean of the gaussian
+    RgbF mu;					// mean of the gaussian
     float covariance[3][3];		// covariance matrix of the gaussian
     float determinant;			// determinant of the covariance matrix
     float inverse[3][3];			// inverse of the covariance matrix
@@ -34,22 +37,22 @@ public:
     unsigned int K() const { return m_K; }
 
     // Returns the probability density of color c in this GMM
-    float p(QColor c);
-
-    // Returns the probability density of color c in just Gaussian k
-    float p(unsigned int i, QColor c);
+    float p(QRgb c);
 
 private:
+
+    // Returns the probability density of color c in just Gaussian k
+    float p(unsigned int i, QRgb c);
 
     unsigned int m_K;		// number of gaussians
     Gaussian* m_gaussians;	// an array of K gaussians
 
-    friend void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
+    friend void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage& hardSegmentation);
     friend void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
 };
 
 // Build the initial GMMs using the Orchard and Bouman color clustering algorithm
-void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
+void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage &hardSegmentation);
 
 // Iteratively learn GMMs using GrabCut updating algorithm
 void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
@@ -62,20 +65,19 @@ public:
     GaussianFitter();
 
     // Add a color sample
-    void add(QColor c);
+    void add(QRgb &c);
 
     // Build the gaussian out of all the added color samples
     void finalize(Gaussian& g, unsigned int totalCount, bool computeEigens = false) const;
 
 private:
 
-    struct
-    {
-        qreal redF, greenF, blueF;
-    } s;			// sum of r,g, and b
-    float  p[3][3];		// matrix of products (i.e. r*r, r*g, r*b), some values are duplicated.
+    Rgb s;              // sum of r,g, and b
+    int  p[3][3];		// matrix of products (i.e. r*r, r*g, r*b), some values are duplicated.
 
     unsigned int count;	// count of color samples added to the gaussian
 };
+
+RgbF rgbToFloat(Rgb input);
 
 #endif // GMM_H

@@ -2,6 +2,7 @@
 #include <QImage>
 
 #include "gmm.h"
+#include "progressiveCut.h"
 #include <Eigen/Eigenvalues>
 
 GMM::GMM(unsigned int K) : m_K(K)
@@ -15,7 +16,7 @@ GMM::~GMM()
         delete [] m_gaussians;
 }
 
-float GMM::p(QColor c)
+float GMM::p(QRgb c)
 {
     float result = 0;
 
@@ -30,7 +31,7 @@ float GMM::p(QColor c)
     return result;
 }
 
-float GMM::p(unsigned int i, QColor c)
+float GMM::p(unsigned int i, QRgb c)
 {
     float result = 0;
 
@@ -38,13 +39,13 @@ float GMM::p(unsigned int i, QColor c)
     {
         if (m_gaussians[i].determinant > 0)
         {
-            float r = c.redF()   - m_gaussians[i].mu.redF;
-            float g = c.greenF() - m_gaussians[i].mu.greenF;
-            float b = c.blueF()  - m_gaussians[i].mu.blueF;
+            float r = (float)((c & 0xFF0000) >> 16) / 255. - m_gaussians[i].mu.redF;
+            float g = (float)((c & 0x00FF00) >>  8) / 255. - m_gaussians[i].mu.greenF;
+            float b = (float)( c & 0x0000FF       ) / 255. - m_gaussians[i].mu.blueF;
 
-            float d = r * (r * m_gaussians[i].inverse[0][0] + g * m_gaussians[i].inverse[1][0] + b * m_gaussians[i].inverse[2][0]) +
-                      g * (r * m_gaussians[i].inverse[0][1] + g * m_gaussians[i].inverse[1][1] + b * m_gaussians[i].inverse[2][1]) +
-                      b * (r * m_gaussians[i].inverse[0][2] + g * m_gaussians[i].inverse[1][2] + b * m_gaussians[i].inverse[2][2]);
+            float d = r * (r * m_gaussians[i].inverse[0][0] + g * m_gaussians[i].inverse[1][0] + b * m_gaussians[i].inverse[2][0])
+                    + g * (r * m_gaussians[i].inverse[0][1] + g * m_gaussians[i].inverse[1][1] + b * m_gaussians[i].inverse[2][1])
+                    + b * (r * m_gaussians[i].inverse[0][2] + g * m_gaussians[i].inverse[1][2] + b * m_gaussians[i].inverse[2][2]);
 
             result = (float)(1.0 / (sqrt(m_gaussians[i].determinant)) * exp(-0.5 * d));
         }
@@ -53,7 +54,7 @@ float GMM::p(unsigned int i, QColor c)
     return result;
 }
 
-void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation)
+void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage& hardSegmentation)
 {
     // Step 3: Build GMMs using Orchard-Bouman clustering algorithm
 
@@ -64,8 +65,8 @@ void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
     unsigned int foreCount = 0, backCount = 0;
 
     QRgb* imagePixel = (QRgb*)image.bits();
-    QRgb* componentsPixel = (QRgb*)components.bits();
-    QRgb* hardSegmentationPixel = (QRgb*)hardSegmentation.bits();
+    uchar* componentsPixel = components.bits();
+    uchar* hardSegmentationPixel = hardSegmentation.bits();
 
     // Initialize the first foreground and background clusters
     for (int y = 0; y < image.height(); y++)
@@ -74,18 +75,19 @@ void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
         {
             *componentsPixel = 0;
 
-            if (*hardSegmentationPixel == segmentForeground)
+            if (*hardSegmentationPixel == strokeForeground)
             {
                 foreFitters[0].add(*imagePixel);
                 foreCount++;
             }
-            else if (*hardSegmentationPixel == segmentBackground)
+            else if (*hardSegmentationPixel == strokeBackground)
             {
-                foreFitters[0].add(*imagePixel);
-                foreCount++;
+                backFitters[0].add(*imagePixel);
+                backCount++;
             }
         }
     }
+    // TODO Загадочно много точек
 
     backFitters[0].finalize(backgroundGMM.m_gaussians[0], backCount, true);
     foreFitters[0].finalize(foregroundGMM.m_gaussians[0], foreCount, true);
@@ -108,40 +110,45 @@ void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
         float splitBack = bg.eigenvectors[0][0] * bg.mu.redF + bg.eigenvectors[1][0] * bg.mu.greenF + bg.eigenvectors[2][0] * bg.mu.blueF;
         float splitFore = fg.eigenvectors[0][0] * fg.mu.redF + fg.eigenvectors[1][0] * fg.mu.greenF + fg.eigenvectors[2][0] * fg.mu.blueF;
 
-        QRgb* imagePixel = (QRgb*)image.bits();
-        QRgb* componentsPixel = (QRgb*)components.bits();
-        QRgb* hardSegmentationPixel = (QRgb*)hardSegmentation.bits();
+        imagePixel = (QRgb*)image.bits();
+        componentsPixel = components.bits();
+        hardSegmentationPixel = hardSegmentation.bits();
 
         // Split clusters nBack and nFore, place split portion into cluster i
         for (int y = 0; y < image.height(); y++)
         {
             for(int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
             {
-                QColor c(*imagePixel);
+                QRgb cCopy = *imagePixel;
+                float cBlue  = (float)(cCopy & 0xFF) / 255.;
+                cCopy >>= 8;
+                float cGreen = (float)(cCopy & 0xFF) / 255.;
+                cCopy >>= 8;
+                float cRed   = (float)(cCopy & 0xFF) / 255.;
 
                 // For each pixel
-                if (i < foregroundGMM.K() && *hardSegmentationPixel == segmentForeground && *componentsPixel == nFore)
+                if (i < foregroundGMM.K() && *hardSegmentationPixel == strokeForeground && *componentsPixel == nFore)
                 {
-                    if (fg.eigenvectors[0][0] * c.redF() + fg.eigenvectors[1][0] * c.greenF() + fg.eigenvectors[2][0] * c.blueF() > splitFore)
+                    if (fg.eigenvectors[0][0] * cRed + fg.eigenvectors[1][0] * cGreen + fg.eigenvectors[2][0] * cBlue > splitFore)
                     {
                         *componentsPixel = i;
-                        foreFitters[i].add(c);
+                        foreFitters[i].add(*imagePixel);
                     }
                     else
                     {
-                        foreFitters[nFore].add(c);
+                        foreFitters[nFore].add(*imagePixel);
                     }
                 }
-                else if (i < backgroundGMM.K() && *hardSegmentationPixel == segmentBackground && *componentsPixel == nBack)
+                else if (i < backgroundGMM.K() && *hardSegmentationPixel == strokeBackground && *componentsPixel == nBack)
                 {
-                    if (bg.eigenvectors[0][0] * c.redF() + bg.eigenvectors[1][0] * c.greenF() + bg.eigenvectors[2][0] * c.blueF() > splitBack)
+                    if (bg.eigenvectors[0][0] * cRed + bg.eigenvectors[1][0] * cGreen + bg.eigenvectors[2][0] * cBlue > splitBack)
                     {
                         *componentsPixel = i;
-                        backFitters[i].add(c);
+                        backFitters[i].add(*imagePixel);
                     }
                     else
                     {
-                        backFitters[nBack].add(c);
+                        backFitters[nBack].add(*imagePixel);
                     }
                 }
             }
@@ -186,16 +193,14 @@ void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
     {
         for (int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
         {
-            QColor c(*imagePixel);
-
-            if (*hardSegmentationPixel == segmentForeground)
+            if (*hardSegmentationPixel == strokeForeground)
             {
                 int k = 0;
                 float max = 0;
 
                 for (unsigned int i = 0; i < foregroundGMM.K(); i++)
                 {
-                    float p = foregroundGMM.p(i, c);
+                    float p = foregroundGMM.p(i, *imagePixel);
                     if (p > max)
                     {
                         k = i;
@@ -212,7 +217,7 @@ void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
 
                 for (unsigned int i = 0; i < backgroundGMM.K(); i++)
                 {
-                    float p = backgroundGMM.p(i, c);
+                    float p = backgroundGMM.p(i, *imagePixel);
                     if (p > max)
                     {
                         k = i;
@@ -241,16 +246,14 @@ void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
     {
         for(int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
         {
-            QColor c(*imagePixel);
-
-            if(*hardSegmentationPixel == segmentForeground)
+            if(*hardSegmentationPixel == strokeForeground)
             {
-                foreFitters[*componentsPixel].add(c);
+                foreFitters[*componentsPixel].add(*imagePixel);
                 foreCount++;
             }
-            else if (*hardSegmentationPixel == segmentBackground)
+            else if (*hardSegmentationPixel == strokeBackground)
             {
-                backFitters[*componentsPixel].add(c);
+                backFitters[*componentsPixel].add(*imagePixel);
                 backCount++;
             }
         }
@@ -280,21 +283,29 @@ GaussianFitter::GaussianFitter()
 }
 
 // Add a color sample
-void GaussianFitter::add(QColor c)
+void GaussianFitter::add(QRgb &c)
 {
-    s.redF   += c.redF();
-    s.greenF += c.greenF();
-    s.blueF  += c.blueF();
+    QRgb cCopy = c;
 
-    p[0][0] += c.redF()   * c.redF();
-    p[0][1] += c.redF()   * c.greenF();
-    p[0][2] += c.redF()   * c.blueF();
-    p[1][0] += c.greenF() * c.redF();
-    p[1][1] += c.greenF() * c.greenF();
-    p[1][2] += c.greenF() * c.blueF();
-    p[2][0] += c.blueF()  * c.redF();
-    p[2][1] += c.blueF()  * c.greenF();
-    p[2][2] += c.blueF()  * c.blueF();
+    int cBlue  = cCopy & 0xFF;
+    cCopy >>= 8;
+    int cGreen = cCopy & 0xFF;
+    cCopy >>= 8;
+    int cRed   = cCopy & 0xFF;
+
+    s.red   += cRed;
+    s.green += cGreen;
+    s.blue  += cBlue;
+
+    p[0][0] += cRed   * cRed;
+    p[0][1] += cRed   * cGreen;
+    p[0][2] += cRed   * cBlue;
+    p[1][0] += cGreen * cRed;
+    p[1][1] += cGreen * cGreen;
+    p[1][2] += cGreen * cBlue;
+    p[2][0] += cBlue  * cRed;
+    p[2][1] += cBlue  * cGreen;
+    p[2][2] += cBlue  * cBlue;
 
     count++;
 }
@@ -313,20 +324,20 @@ void GaussianFitter::finalize(Gaussian& g, unsigned int totalCount, bool compute
     else
     {
         // Compute mean of gaussian
-        g.mu.redF   = s.redF   / count;
-        g.mu.greenF = s.greenF / count;
-        g.mu.blueF  = s.blueF  / count;
+        g.mu.redF   = (float)s.red   / (count * 255);
+        g.mu.greenF = (float)s.green / (count * 255);
+        g.mu.blueF  = (float)s.blue  / (count * 255);
 
         // Compute covariance matrix
-        g.covariance[0][0] = p[0][0] / count - g.mu.redF   * g.mu.redF + Epsilon;
-        g.covariance[0][1] = p[0][1] / count - g.mu.redF   * g.mu.greenF;
-        g.covariance[0][2] = p[0][2] / count - g.mu.redF   * g.mu.blueF;
-        g.covariance[1][0] = p[1][0] / count - g.mu.greenF * g.mu.redF;
-        g.covariance[1][1] = p[1][1] / count - g.mu.greenF * g.mu.greenF + Epsilon;
-        g.covariance[1][2] = p[1][2] / count - g.mu.greenF * g.mu.blueF;
-        g.covariance[2][0] = p[2][0] / count - g.mu.blueF  * g.mu.redF;
-        g.covariance[2][1] = p[2][1] / count - g.mu.blueF  * g.mu.greenF;
-        g.covariance[2][2] = p[2][2] / count - g.mu.blueF  * g.mu.blueF + Epsilon;
+        g.covariance[0][0] = (float)p[0][0] / (count * 255) - g.mu.redF   * g.mu.redF + Epsilon;
+        g.covariance[0][1] = (float)p[0][1] / (count * 255) - g.mu.redF   * g.mu.greenF;
+        g.covariance[0][2] = (float)p[0][2] / (count * 255) - g.mu.redF   * g.mu.blueF;
+        g.covariance[1][0] = (float)p[1][0] / (count * 255) - g.mu.greenF * g.mu.redF;
+        g.covariance[1][1] = (float)p[1][1] / (count * 255) - g.mu.greenF * g.mu.greenF + Epsilon;
+        g.covariance[1][2] = (float)p[1][2] / (count * 255) - g.mu.greenF * g.mu.blueF;
+        g.covariance[2][0] = (float)p[2][0] / (count * 255) - g.mu.blueF  * g.mu.redF;
+        g.covariance[2][1] = (float)p[2][1] / (count * 255) - g.mu.blueF  * g.mu.greenF;
+        g.covariance[2][2] = (float)p[2][2] / (count * 255) - g.mu.blueF  * g.mu.blueF + Epsilon;
 
         // Compute determinant of covariance matrix
         g.determinant = g.covariance[0][0] * (g.covariance[1][1]*g.covariance[2][2]-g.covariance[1][2]*g.covariance[2][1])
@@ -351,7 +362,7 @@ void GaussianFitter::finalize(Gaussian& g, unsigned int totalCount, bool compute
         if (computeEigens)
         {
 
-            Eigen::MatrixX2f cov(3, 3);
+            Eigen::MatrixXf cov(3, 3);
             cov(0, 0) = g.covariance[0][0];
             cov(0, 1) = g.covariance[0][1];
             cov(0, 2) = g.covariance[0][2];
@@ -380,3 +391,12 @@ void GaussianFitter::finalize(Gaussian& g, unsigned int totalCount, bool compute
     }
 }
 
+RgbF rgbToFloat(Rgb input)
+{
+    RgbF output;
+    output.redF   = (float)input.red   / 255;
+    output.greenF = (float)input.green / 255;
+    output.blueF  = (float)input.blue  / 255;
+
+    return output;
+}
