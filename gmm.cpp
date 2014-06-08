@@ -2,6 +2,7 @@
 #include <QImage>
 
 #include "gmm.h"
+#include <Eigen/Eigenvalues>
 
 GMM::GMM(unsigned int K) : m_K(K)
 {
@@ -56,7 +57,7 @@ void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const
 {
     // Step 3: Build GMMs using Orchard-Bouman clustering algorithm
 
-    // Set up Gaussian Fitters
+    // Set up Gaussian Fitters (Пики )
     GaussianFitter* backFitters = new GaussianFitter[backgroundGMM.K()];
     GaussianFitter* foreFitters = new GaussianFitter[foregroundGMM.K()];
 
@@ -349,19 +350,32 @@ void GaussianFitter::finalize(Gaussian& g, unsigned int totalCount, bool compute
 
         if (computeEigens)
         {
-/*
-#ifdef USE_DOUBLE
-    #define CV_TYPE CV_64FC1
-#else
-    #define CV_TYPE CV_32FC1
-#endif
-            // Build OpenCV wrappers around our data.
-            CvMat mat = cvMat(3, 3, CV_TYPE, g.covariance);
-            CvMat eval = cvMat(3, 1, CV_TYPE, g.eigenvalues);
-            CvMat evec = cvMat(3, 3, CV_TYPE, g.eigenvectors);
 
-            // Compute eigenvalues and vectors using SVD
-            cvSVD( &mat, &eval, &evec );*/
+            Eigen::MatrixX2f cov(3, 3);
+            cov(0, 0) = g.covariance[0][0];
+            cov(0, 1) = g.covariance[0][1];
+            cov(0, 2) = g.covariance[0][2];
+            cov(1, 0) = g.covariance[1][0];
+            cov(1, 1) = g.covariance[1][1];
+            cov(1, 2) = g.covariance[1][2];
+            cov(2, 0) = g.covariance[2][0];
+            cov(2, 1) = g.covariance[2][1];
+            cov(2, 2) = g.covariance[2][2];
+
+            Eigen::EigenSolver<Eigen::MatrixXf> eigen(cov);
+            g.eigenvalues[0] = eigen.eigenvalues()[0].real();
+            g.eigenvalues[1] = eigen.eigenvalues()[1].real();
+            g.eigenvalues[2] = eigen.eigenvalues()[2].real();
+
+            g.eigenvectors[0][0] = eigen.eigenvectors()(0, 0).real();
+            g.eigenvectors[0][1] = eigen.eigenvectors()(0, 1).real();
+            g.eigenvectors[0][2] = eigen.eigenvectors()(0, 2).real();
+            g.eigenvectors[1][0] = eigen.eigenvectors()(1, 0).real();
+            g.eigenvectors[1][1] = eigen.eigenvectors()(1, 1).real();
+            g.eigenvectors[1][2] = eigen.eigenvectors()(1, 2).real();
+            g.eigenvectors[2][0] = eigen.eigenvectors()(2, 0).real();
+            g.eigenvectors[2][1] = eigen.eigenvectors()(2, 1).real();
+            g.eigenvectors[2][2] = eigen.eigenvectors()(2, 2).real();
         }
     }
 }
