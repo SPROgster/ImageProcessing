@@ -1,11 +1,16 @@
 #ifndef PROGRESSIVECUT_H
 #define PROGRESSIVECUT_H
 
+#define GMM_K 5
+
 #include <QImage>
 #include <QVector>
+#include <QLabel>       // Для отладки
+#include <QPixmap>      // Для отладки
 #include <math.h>
 
 #include "graph.h"
+#include "gmm.h"
 
 class ProgressiveCut
 {
@@ -14,14 +19,28 @@ private:
     QImage* image;
     QImage* foregroundSelection;
     QImage* backgroundSelection;
+    QImage* strokeSelection;
 
     QVector<QRgb> maskColorTable;
+    QVector<QRgb> strokeColorTable;
+    QVector<QRgb> componentsColorTable;
 
-    int imageWidth, imageHeight;
+    int imageWidth, imageHeight, imageSizeInPixels;
+    float infinity;
 
-    void initMaskColorTable();
+    void initColorTables();
 
-    void createGraph();
+    // Две маски вливаются в одну
+    int createStrokeMask();
+    enum strokeType { noStroke, strokeForeground, strokeBackground };
+
+    //GMM
+    GMM* gmmBackground;
+    GMM* gmmForeground;
+    QImage* components;
+
+    //Debugging
+    QLabel* imageOutput;
 
 public:
     ProgressiveCut();
@@ -31,6 +50,14 @@ public:
     void setImage(const QImage& imageToCut);
     bool setForeground(const QImage& foreground);
     bool setBackground(const QImage& background);
+
+    bool updateForeground(const QImage& foreground);
+    bool updateBackground(const QImage& background);
+
+    bool createGraph();
+    void updateGraph();
+
+    void setImageOutput(QLabel* imageView);
 };
 
 float
