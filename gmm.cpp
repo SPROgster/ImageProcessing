@@ -28,7 +28,7 @@ float GMM::p(QRgb c)
         }
     }
 
-    return result;
+    return result / m_K;
 }
 
 float GMM::p(unsigned int i, QRgb c)
