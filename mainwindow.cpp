@@ -27,6 +27,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->maskSlider, SIGNAL(sliderMoved(int)), this, SLOT(maskSliderChanged(int)));
     connect(ui->maskSpin, SIGNAL(valueChanged(int)), this, SLOT(maskSpinChanged(int)));
 
+    // Progressive cut
+    connect(ui->buttonFore, SIGNAL(clicked()), this, SLOT(buttonForegroundClicked()));
+    connect(ui->buttonBack, SIGNAL(clicked()), this, SLOT(buttonBackgroundClicked()));
+    connect(ui->buttonGraph, SIGNAL(clicked()), this, SLOT(buttonCreateGraphClicked()));
+
     //Обработка рисования маски
     ui->imageView->installEventFilter(this);
 
@@ -56,6 +61,18 @@ MainWindow::MainWindow(QWidget *parent) :
     historyLayout->addItem(historySpacer);
 
     historyList.clear();
+
+    // Progressive cut
+    progressiveCut = 0;
+    graphCreated = false;
+    segmentBackgroundNew = false;
+    segmentForegroundNew = false;
+
+    ui->maskMergeButton->setVisible(false);
+
+    ui->buttonBack->setEnabled(false);
+    ui->buttonFore->setEnabled(false);
+    ui->buttonGraph->setEnabled(false);
 }
 
 MainWindow::~MainWindow()
@@ -69,6 +86,8 @@ MainWindow::~MainWindow()
     DeleteIfNotNull(maskImage);
     DeleteIfNotNull(maskCursor);
 
+    DeleteIfNotNull(progressiveCut);
+
     delete image;
     delete ui;
 }
@@ -79,6 +98,9 @@ MainWindow::~MainWindow()
 void MainWindow::menuFileOpen()
 {
     loadImage();
+    DeleteIfNotNull(progressiveCut);
+    progressiveCut = new ProgressiveCut(*image);
+    graphCreated = false;
 }
 
 void MainWindow::menuFileExit()
@@ -169,6 +191,87 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     return QMainWindow::eventFilter(obj, event);
 }
 
+void MainWindow::buttonForegroundClicked()
+{
+    if (graphCreated)
+    {
+        segmentForegroundNew = true;
+
+        progressiveCut->updateForeground(*selectionAlpha);
+
+        maskCancelButtonClicked();
+    }
+    else
+    {
+        segmentForegroundNew = true;
+
+        progressiveCut->setForeground(*selectionAlpha);
+
+        maskCancelButtonClicked();
+    }
+}
+
+void MainWindow::buttonBackgroundClicked()
+{
+    if (graphCreated)
+    {
+        segmentBackgroundNew = true;
+
+        progressiveCut->updateBackground(*selectionAlpha);
+
+        maskCancelButtonClicked();
+    }
+    else
+    {
+        segmentBackgroundNew = true;
+
+        progressiveCut->setBackground(*selectionAlpha);
+
+        maskCancelButtonClicked();
+    }
+}
+
+void MainWindow::buttonCreateGraphClicked()
+{
+    if (graphCreated)
+    {
+        if (!segmentBackgroundNew && !segmentForegroundNew)
+        {
+            QMessageBox(QMessageBox::Critical, "Невозможно обновить граф", "Нет новых мазков").exec();
+
+            return;
+        }
+
+        segmentBackgroundNew = false;
+        segmentForegroundNew = false;
+
+        progressiveCut->updateGraph();
+    }
+    else
+    {
+        if (!segmentBackgroundNew)
+        {
+            QMessageBox(QMessageBox::Critical, "Невозможно создать граф", "Не указан фон").exec();
+
+            return;
+        }
+
+        if (!segmentForegroundNew)
+        {
+            QMessageBox(QMessageBox::Critical, "Невозможно создать граф", "Не указан объект").exec();
+
+            return;
+        }
+
+        progressiveCut->setImageOutput(ui->imageView);
+        progressiveCut->createGraph();
+
+        graphCreated = true;
+        segmentBackgroundNew = false;
+        segmentForegroundNew = false;
+    }
+}
+
 void MainWindow::maskButtonClicked(bool checked)
 {
     if (checked)
@@ -195,6 +298,11 @@ void MainWindow::maskButtonClicked(bool checked)
 
             maskedImage = new QImage(*image);
         }
+
+        // Progressive cut
+        ui->buttonBack->setEnabled(false);
+        ui->buttonFore->setEnabled(false);
+        ui->buttonGraph->setEnabled(false);
     }
     else
     {
@@ -218,6 +326,11 @@ void MainWindow::maskButtonClicked(bool checked)
         {
             ui->maskCancel->setEnabled(true);
             ui->maskMergeButton->setEnabled(true);
+
+            // Progressive cut
+            ui->buttonBack->setEnabled(true);
+            ui->buttonFore->setEnabled(true);
+            ui->buttonGraph->setEnabled(true);
         }
         else
         {
@@ -267,6 +380,10 @@ void MainWindow::maskCancelButtonClicked()
     ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
     maskIsEmpty = true;
+
+    // Progressive cut
+    ui->buttonBack->setEnabled(false);
+    ui->buttonFore->setEnabled(false);
 }
 
 void MainWindow::maskSpinChanged(int value)

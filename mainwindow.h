@@ -8,6 +8,7 @@
 #include <QSpacerItem>
 
 #include "imageentry.h"
+#include "progressiveCut.h"
 
 namespace Ui {
 class MainWindow;
@@ -25,6 +26,11 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event);
 
 private slots:
+
+    // Слоты progressive Cut
+    void buttonForegroundClicked();
+    void buttonBackgroundClicked();
+    void buttonCreateGraphClicked();
 
     // Слоты панели маски
     void maskButtonClicked(bool checked);
@@ -82,6 +88,16 @@ private:
     QLayout* historyLayout;
     QSpacerItem* historySpacer;
     QList<imageEntry*> historyList;
+
+    // Progressive Cut
+private:
+    ProgressiveCut* progressiveCut;
+
+    bool graphCreated;
+    bool segmentBackgroundNew;
+    bool segmentForegroundNew;
+
+    friend class ProgressiveCut;
 };
 
 #endif // MAINWINDOW_H
