@@ -117,7 +117,6 @@ void MainWindow::menuEditCoinMask()
 
         image = new QImage(ui->imageView->pixmap()->toImage().createMaskFromColor(0xFF000000).convertToFormat(QImage::Format_ARGB32));
         ui->imageView->setPixmap(QPixmap::fromImage(*image));
-        QMessageBox(QMessageBox::NoIcon, "1", "1").exec();
         coinView.loadCoins(image, imageBefore);
 
         addEntryToHistory("Замыкание диском");

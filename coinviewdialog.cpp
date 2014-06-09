@@ -324,7 +324,7 @@ void coinViewDialog::loadCoins(const QImage *coins, const QImage& image)
 
     iterator = coinsList.begin();
 
-    ui->imageView->setPixmap(QPixmap::fromImage(*(iterator + 1)));
+    ui->imageView->setPixmap(QPixmap::fromImage(*iterator));
 }
 
 void coinViewDialog::replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
@@ -350,7 +350,7 @@ int coinViewDialog::hsvValue(QRgb color)
 void coinViewDialog::nextImage()
 {
     iterator++;
-    if (iterator == coinsList.end())
+    if (iterator == (coinsList.end() - 1))
     {
         iterator = coinsList.begin();
     }
