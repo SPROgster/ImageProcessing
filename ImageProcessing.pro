@@ -18,18 +18,21 @@ SOURCES += main.cpp\
     imageentry.cpp \
     structuralElements.cpp \
     morphology.cpp \
-    coindialog.cpp
+    coindialog.cpp \
+    coinviewdialog.cpp
 
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
     morphology.h \
-    coindialog.h
+    coindialog.h \
+    coinviewdialog.h
 
 
 FORMS    += mainwindow.ui \
-    coindialog.ui
+    coindialog.ui \
+    coinviewdialog.ui
 
 OTHER_FILES +=
 
