@@ -6,6 +6,9 @@ coinViewDialog::coinViewDialog(QWidget *parent) :
     ui(new Ui::coinViewDialog)
 {
     ui->setupUi(this);
+
+    connect(ui->buttonNext, SIGNAL(clicked()), this, SLOT(nextImage()));
+    connect(ui->buttonLast, SIGNAL(clicked()), this, SLOT(prevImage()));
 }
 
 coinViewDialog::~coinViewDialog()
@@ -15,15 +18,15 @@ coinViewDialog::~coinViewDialog()
 
 QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
 {
-    QImage bitmap(origin->createMaskFromColor(0xFF000000, Qt::MaskOutColor).convertToFormat(QImage::Format_RGB32));
+    //QImage bitmap(origin->createMaskFromColor(0xFF000000, Qt::MaskOutColor).convertToFormat(QImage::Format_RGB32));
 
-    QImage* componentsMap = new QImage(bitmap.width(), bitmap.height(), QImage::Format_RGB32);
+    QImage* componentsMap = new QImage(origin->width(), origin->height(), QImage::Format_RGB32);
     componentsMap->fill(QColor(0, 0, 0, 0));
 
     QRgb currColor = 0xFF000000;
 
     // Берем 2ю по счету строку и 2й по счету элемент. Граница изображения игнорируется
-    QRgb* y1 = (QRgb*)bitmap.scanLine(0);
+    QRgb* y1 = (QRgb*)origin->scanLine(0);
     QRgb* y2 = (QRgb*)componentsMap->scanLine(0);
 
     // Список активных маркеров. В последствие, когда будем соединять несколько линий, которая правее будет заменяться
@@ -43,9 +46,9 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
     y1++;
     y2++;
 
-    int width = bitmap.width();
+    int width = origin->width();
     // Маркируем первую строку. Смотрим, стоит ли что слева, для этого curveNum пригодилась
-    for (int x = 1; x < bitmap.width(); x++, y1++, y2++)
+    for (int x = 1; x < origin->width(); x++, y1++, y2++)
     {
         if (*y1 & 0x1)
         {
@@ -66,7 +69,7 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
     curveNum = curveNum1;
 
     // Маркируем первый столбец
-    for (int y = 1; y < bitmap.height(); y++, y1 += width, y2 += width)
+    for (int y = 1; y < origin->height(); y++, y1 += width, y2 += width)
     {
         if (*(y1) & 0x1)
         {
@@ -86,12 +89,12 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
 
     // Теперь идем по внутренней части
     QRgb *bitmapPixel;
-    bitmapPixel = (QRgb*)bitmap.scanLine(1);
+    bitmapPixel = (QRgb*)origin->scanLine(1);
 
     y1 = (QRgb *)componentsMap->scanLine(0);
     y2 = (QRgb *)componentsMap->scanLine(1);
 
-    for (int y = 1; y < bitmap.height(); y++)
+    for (int y = 1; y < origin->height(); y++)
     {
         bitmapPixel++;
         y1++; y2++; // + 1 лишний раз будет делать for по x
@@ -109,10 +112,10 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
                 // |*| | |
                 // _______
                 // | |?| |
-                /*curveNum1 = *(y1 - 1) & 0xFFFFFF;
+                curveNum1 = *(y1 - 1) & 0xFFFFFF;
                 if (curveNum1)
                     // Если выбранный пиксель пронумерован, то проверяемый соединяем с ним
-                    curveNum = curveNum1;*/
+                    curveNum = curveNum1;
 
                 // _______
                 // | |*| |
@@ -121,12 +124,12 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
                 curveNum1 = *y1 & 0xFFFFFF;
                 if (curveNum1)
                 {
-                    /*if (curveNum != curveNum1 && curveNum)
+                    if (curveNum != curveNum1 && curveNum)
                     {   // TODO сверху 2 ячейки занумерованы. но теоритически, этот if всегда -
                         componentsActive.replace(curveNum1 - 1, false);
                         replaceColor(componentsMap, 0xFF000000 | curveNum1, 0xFF000000 | curveNum);
                     }
-                    else*/
+                    else
                         curveNum = curveNum1;
                 }
 
@@ -153,7 +156,7 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
                 // | | |*|
                 // _______
                 // | |?| |
-                /*if (x < bitmap.width() - 2)
+                if (x < origin->width() - 2)
                 {
                     curveNum1 = *(y1 + 1) & 0xFFFFFF;
                     if (curveNum1)
@@ -166,7 +169,7 @@ QImage* coinViewDialog::selectComponents(const QImage* origin, int& colorNumber)
                         else
                             curveNum = curveNum1;
                     }
-                }*/
+                }
 
                 // Если сосед есть
                 if (curveNum)
@@ -304,9 +307,24 @@ QImage* coinViewDialog::imageGradient(const QImage *origin)
     return buffer;
 }
 
-void coinViewDialog::loadCoins(const QImage *coins)
+void coinViewDialog::loadCoins(const QImage *coins, const QImage& image)
 {
-    ;
+    int colors;
+//    QImage mask = coins->createMaskFromColor(0xFF000000).convertToFormat(QImage::Format_ARGB32);
+    QImage* segments = selectComponents(coins, colors);
+
+    coinsList.clear();
+    for (int i = 0; i < colors; i++)
+    {
+        QImage coinAlpha(segments->createMaskFromColor(i + 1 + 0xFF000000));
+        QImage coinImage(image);
+        coinImage.setAlphaChannel(coinAlpha);
+        coinsList << coinImage;
+    }
+
+    iterator = coinsList.begin();
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*(iterator + 1)));
 }
 
 void coinViewDialog::replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
@@ -316,4 +334,36 @@ void coinViewDialog::replaceColor(QImage *image, const QRgb colorToReplace, cons
         for (int x = 0; x < image->width(); x++, xLine++)
             if (*xLine == colorToReplace)
                 *xLine = newColor;
+}
+
+int coinViewDialog::hsvValue(QRgb color)
+{
+    int R = (color >> 16) & 0xFF,
+        G = (color >>  8) & 0xFF,
+        B = (color      ) & 0xFF;
+
+    int max = (R > G) ? R : G;
+
+    return (max > B) ? max : B;
+}
+
+void coinViewDialog::nextImage()
+{
+    iterator++;
+    if (iterator == coinsList.end())
+    {
+        iterator = coinsList.begin();
+    }
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*iterator));
+}
+
+void coinViewDialog::prevImage()
+{
+    if (iterator == coinsList.begin())
+        iterator = coinsList.end();
+
+    iterator--;
+
+    ui->imageView->setPixmap(QPixmap::fromImage(*iterator));
 }

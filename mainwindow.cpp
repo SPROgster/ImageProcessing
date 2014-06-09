@@ -9,6 +9,7 @@
 #include "imageentry.h"
 
 #include "coindialog.h"
+#include "coinviewdialog.h"
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -109,9 +110,19 @@ void MainWindow::menuEditCoinMask()
 
     if (result)
     {
+        coinViewDialog coinView(this);
+
+        QImage imageBefore(*image);
         MoneyMask(coinDialog->value);
-        *image = (QImage)(ui->imageView->pixmap()->toImage());
+
+        image = new QImage(ui->imageView->pixmap()->toImage().createMaskFromColor(0xFF000000).convertToFormat(QImage::Format_ARGB32));
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
+        QMessageBox(QMessageBox::NoIcon, "1", "1").exec();
+        coinView.loadCoins(image, imageBefore);
+
         addEntryToHistory("Замыкание диском");
+
+        coinView.exec();
     }
 }
 
