@@ -18,6 +18,7 @@ public:
     QImage *selectComponents(const QImage *origin, int &colorNumber);
     QImage *imageGradient(const QImage *origin);
     void loadCoins(const QImage* coins);
+    void replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor);
 private:
     Ui::coinViewDialog *ui;
 };

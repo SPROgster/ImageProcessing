@@ -308,3 +308,12 @@ void coinViewDialog::loadCoins(const QImage *coins)
 {
     ;
 }
+
+void coinViewDialog::replaceColor(QImage *image, const QRgb colorToReplace, const QRgb newColor)
+{
+    QRgb* xLine = (QRgb*)image->scanLine(0);
+    for (int y = 0; y < image->height(); y++)
+        for (int x = 0; x < image->width(); x++, xLine++)
+            if (*xLine == colorToReplace)
+                *xLine = newColor;
+}
