@@ -1,402 +1,566 @@
-#include <cmath>
-#include <QImage>
-
 #include "gmm.h"
-#include "progressiveCut.h"
-#include <Eigen/Eigenvalues>
 
-GMM::GMM(unsigned int K) : m_K(K)
+#include <QMessageBox>
+#include <QProgressDialog>
+#include <cmath>
+
+#include "Eigen/Eigenvalues"
+
+GMM::GMM(int k)
 {
-    m_gaussians = new Gaussian[m_K];
+    K = k;
+    g = 0;
+
+    pointsList.clear();
+    image = 0;
 }
 
 GMM::~GMM()
 {
-    if (m_gaussians)
-        delete [] m_gaussians;
+    if (image)
+        delete image;
+
+    if (g)
+        delete [] g;
 }
 
-float GMM::p(QRgb c)
+void GMM::loadImage(QImage &image_)
 {
-    float result = 0;
+    if (image)
+        delete image;
 
-    if (m_gaussians)
+    image = new QImage(image_.convertToFormat(QImage::Format_ARGB32_Premultiplied));
+}
+
+float GMM::p(RgbColor x)
+{
+    float prob = 0;
+    for (int i = 0; i < K; i++)
     {
-        for (unsigned int i=0; i < m_K; i++)
-        {
-            result += m_gaussians[i].pi * p(i, c);
-        }
+        prob += p(i, x);
     }
 
-    return result / m_K;
+    return prob;
 }
 
-float GMM::p(unsigned int i, QRgb c)
+float GMM::p(QRgb x)
 {
-    float result = 0;
+    float prob = 0;
+    RgbColor x_;
+    x_.R = (x & 0xFF0000) >> 16;
+    x_.G = (x & 0xFF00) >> 8;
+    x_.B = (x & 0xFF);
 
-    if( m_gaussians[i].pi > 0 )
+    for (int i = 0; i < K; i++)
     {
-        if (m_gaussians[i].determinant > 0)
-        {
-            float r = (float)((c & 0xFF0000) >> 16) / 255. - m_gaussians[i].mu.redF;
-            float g = (float)((c & 0x00FF00) >>  8) / 255. - m_gaussians[i].mu.greenF;
-            float b = (float)( c & 0x0000FF       ) / 255. - m_gaussians[i].mu.blueF;
-
-            float d = r * (r * m_gaussians[i].inverse[0][0] + g * m_gaussians[i].inverse[1][0] + b * m_gaussians[i].inverse[2][0])
-                    + g * (r * m_gaussians[i].inverse[0][1] + g * m_gaussians[i].inverse[1][1] + b * m_gaussians[i].inverse[2][1])
-                    + b * (r * m_gaussians[i].inverse[0][2] + g * m_gaussians[i].inverse[1][2] + b * m_gaussians[i].inverse[2][2]);
-
-            result = (float)(1.0 / (sqrt(m_gaussians[i].determinant)) * exp(-0.5 * d));
-        }
+        prob += p(i, x_);
     }
 
-    return result;
+    return prob;
 }
 
-void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage& hardSegmentation)
+void GMM::loadPoints(QImage &points)
 {
-    // Step 3: Build GMMs using Orchard-Bouman clustering algorithm
+    uchar* iter = points.bits();
+    QRgb* pixel = (QRgb*)image->bits();
+    RgbColor newPoint;
 
-    // Set up Gaussian Fitters (Пики )
-    GaussianFitter* backFitters = new GaussianFitter[backgroundGMM.K()];
-    GaussianFitter* foreFitters = new GaussianFitter[foregroundGMM.K()];
+    for (int i = 0; i < points.byteCount(); i++, iter++, pixel++)
+        if (*iter)
+        {
+            newPoint.R = (*pixel & 0xFF0000) >> 16;
+            newPoint.G = (*pixel & 0xFF00) >> 8;
+            newPoint.B = *pixel & 0xFF;
 
-    unsigned int foreCount = 0, backCount = 0;
+            newPoint.Rf = (float)newPoint.R / 255.;
+            newPoint.Gf = (float)newPoint.G / 255.;
+            newPoint.Bf = (float)newPoint.B / 255.;
 
-    QRgb* imagePixel = (QRgb*)image.bits();
-    uchar* componentsPixel = components.bits();
-    uchar* hardSegmentationPixel = hardSegmentation.bits();
+            pointsList << newPoint;
+        }
+}
 
-    // Initialize the first foreground and background clusters
-    for (int y = 0; y < image.height(); y++)
+void GMM::finalize()
+{
+    EM em(this);
+    g = em.splitNotEM(K, pointsList);
+    //g = em.splitContinious(K, pointsList, 20);
+}
+
+float gaussN(RgbColor x, const Gaussian &g)
+{
+    float x_mu[3];
+    x_mu[0] = (float)x.R - g.mu.Rf;
+    x_mu[1] = (float)x.G - g.mu.Gf;
+    x_mu[2] = (float)x.B - g.mu.Bf;
+
+    double expPower = x_mu[0] * (g.inver[0][0] * x_mu[0] + g.inver[0][1] * x_mu[1] + g.inver[0][2] * x_mu[2])
+                    + x_mu[1] * (g.inver[1][0] * x_mu[0] + g.inver[1][1] * x_mu[1] + g.inver[1][2] * x_mu[2])
+                    + x_mu[2] * (g.inver[2][0] * x_mu[0] + g.inver[2][1] * x_mu[1] + g.inver[2][2] * x_mu[2]);
+            //(x - mu) * inv * (x - mu) * 0.5;
+
+    expPower = exp(-0.5 * expPower);
+
+    double pp = g.coeff * expPower;
+    return pp;
+}
+
+
+void
+EM::fitGaussian(Gaussian *g, QList<RgbColor> &points)
+{
+    memset(g, 0, sizeof(Gaussian));
+
+    g->w = 1;
+
+    // Количество точек. Понадобится в будущем
+    double size = g->pointsCount = points.size();
+
+    // Ссылки
+    RgbColor& mu = g->mu;
+
+    // Находим среднее
+    RgbColor iter;
+    foreach (iter, points)
     {
-        for (int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
-        {
-            *componentsPixel = 0;
+        // Сумма цветов
+        mu.Rf += iter.R;
+        mu.Gf += iter.G;
+        mu.Bf += iter.B;
 
-            if (*hardSegmentationPixel == strokeForeground)
-            {
-                foreFitters[0].add(*imagePixel);
-                foreCount++;
-            }
-            else if (*hardSegmentationPixel == strokeBackground)
-            {
-                backFitters[0].add(*imagePixel);
-                backCount++;
-            }
-        }
-    }
-    // TODO Загадочно много точек
+        // Для вычисления матрицы ковариаций
+        g->sigma[0][0] += iter.R * iter.R;
+        g->sigma[0][1] += iter.R * iter.G;
+        g->sigma[0][2] += iter.R * iter.B;
 
-    backFitters[0].finalize(backgroundGMM.m_gaussians[0], backCount, true);
-    foreFitters[0].finalize(foregroundGMM.m_gaussians[0], foreCount, true);
+        g->sigma[1][1] += iter.G * iter.G;
+        g->sigma[1][2] += iter.G * iter.B;
 
-    unsigned int nBack = 0, nFore = 0;		// Which cluster will be split
-    unsigned int maxK = backgroundGMM.K() > foregroundGMM.K() ? backgroundGMM.K() : foregroundGMM.K();
-
-    // Compute clusters
-    for (unsigned int i = 1; i < maxK; i++)
-    {
-        // Reset the fitters for the splitting clusters
-        backFitters[nBack] = GaussianFitter();
-        foreFitters[nFore] = GaussianFitter();
-
-        // For brevity, get references to the splitting Gaussians
-        Gaussian& bg = backgroundGMM.m_gaussians[nBack];
-        Gaussian& fg = foregroundGMM.m_gaussians[nFore];
-
-        // Compute splitting points
-        float splitBack = bg.eigenvectors[0][0] * bg.mu.redF + bg.eigenvectors[1][0] * bg.mu.greenF + bg.eigenvectors[2][0] * bg.mu.blueF;
-        float splitFore = fg.eigenvectors[0][0] * fg.mu.redF + fg.eigenvectors[1][0] * fg.mu.greenF + fg.eigenvectors[2][0] * fg.mu.blueF;
-
-        imagePixel = (QRgb*)image.bits();
-        componentsPixel = components.bits();
-        hardSegmentationPixel = hardSegmentation.bits();
-
-        // Split clusters nBack and nFore, place split portion into cluster i
-        for (int y = 0; y < image.height(); y++)
-        {
-            for(int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
-            {
-                QRgb cCopy = *imagePixel;
-                float cBlue  = (float)(cCopy & 0xFF) / 255.;
-                cCopy >>= 8;
-                float cGreen = (float)(cCopy & 0xFF) / 255.;
-                cCopy >>= 8;
-                float cRed   = (float)(cCopy & 0xFF) / 255.;
-
-                // For each pixel
-                if (i < foregroundGMM.K() && *hardSegmentationPixel == strokeForeground && *componentsPixel == nFore)
-                {
-                    if (fg.eigenvectors[0][0] * cRed + fg.eigenvectors[1][0] * cGreen + fg.eigenvectors[2][0] * cBlue > splitFore)
-                    {
-                        *componentsPixel = i;
-                        foreFitters[i].add(*imagePixel);
-                    }
-                    else
-                    {
-                        foreFitters[nFore].add(*imagePixel);
-                    }
-                }
-                else if (i < backgroundGMM.K() && *hardSegmentationPixel == strokeBackground && *componentsPixel == nBack)
-                {
-                    if (bg.eigenvectors[0][0] * cRed + bg.eigenvectors[1][0] * cGreen + bg.eigenvectors[2][0] * cBlue > splitBack)
-                    {
-                        *componentsPixel = i;
-                        backFitters[i].add(*imagePixel);
-                    }
-                    else
-                    {
-                        backFitters[nBack].add(*imagePixel);
-                    }
-                }
-            }
-        }
-
-
-        // Compute new split Gaussians
-        backFitters[nBack].finalize(backgroundGMM.m_gaussians[nBack], backCount, true);
-        foreFitters[nFore].finalize(foregroundGMM.m_gaussians[nFore], foreCount, true);
-
-        if (i < backgroundGMM.K())
-            backFitters[i].finalize(backgroundGMM.m_gaussians[i], backCount, true);
-        if (i < foregroundGMM.K())
-            foreFitters[i].finalize(foregroundGMM.m_gaussians[i], foreCount, true);
-
-        // Find clusters with highest eigenvalue
-        nBack = 0;
-        nFore = 0;
-
-        for (unsigned int j = 0; j <= i; j++ )
-        {
-            if (j < backgroundGMM.K() && backgroundGMM.m_gaussians[j].eigenvalues[0] > backgroundGMM.m_gaussians[nBack].eigenvalues[0])
-                nBack = j;
-
-            if (j < foregroundGMM.K() && foregroundGMM.m_gaussians[j].eigenvalues[0] > foregroundGMM.m_gaussians[nFore].eigenvalues[0])
-                nFore = j;
-        }
+        g->sigma[2][2] += iter.B * iter.B;
     }
 
-    delete [] backFitters;
-    delete [] foreFitters;
-}
+    // Вычисляем среднее
+    mu.Rf /= size; mu.Gf /= size; mu.Bf /= size;
 
-void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation)
-{
-    QRgb* imagePixel = (QRgb*)image.bits();
-    QRgb* componentsPixel = (QRgb*)components.bits();
-    QRgb* hardSegmentationPixel = (QRgb*)hardSegmentation.bits();
+    g->sigma[0][0] /= size; g->sigma[0][1] /= size; g->sigma[0][2] /= size;
+                            g->sigma[1][1] /= size; g->sigma[1][2] /= size;
+                                                    g->sigma[2][2] /= size;
 
-    // Step 4: Assign each pixel to the component which maximizes its probability
-    for (int y = 0; y < image.height(); y++)
+    // - Средние
+    g->sigma[0][0] -= (double)(mu.Rf * mu.Rf);
+    g->sigma[0][1] -= (double)(mu.Rf * mu.Gf);
+    g->sigma[0][2] -= (double)(mu.Rf * mu.Bf);
+
+    g->sigma[1][1] -= (double)(mu.Gf * mu.Gf);
+    g->sigma[1][2] -= (double)(mu.Gf * mu.Bf);
+
+    g->sigma[2][2] -= (double)(mu.Bf * mu.Bf);
+
+    // Копируем верхний триугольник на нижний триугольник
+    g->sigma[1][0] = g->sigma[0][1];
+    g->sigma[2][0] = g->sigma[0][2]; g->sigma[2][1] = g->sigma[1][2];
+
+    // Вычисляем присоединеную матрицу для вычисления обратной матрицы.
+    // !!! Это транспонированная матрица из миноров (транспонированная матрица алгебраических дополнений)
+    // Но, матрица ковариаций симметрична, значит и эта симметрична
+    //
+    g->inver[0][0] = g->sigma[1][1] * g->sigma[2][2] - g->sigma[1][2] * g->sigma[2][1];
+    g->inver[1][0] = g->sigma[1][2] * g->sigma[2][0] - g->sigma[1][0] * g->sigma[2][2];
+    g->inver[2][0] = g->sigma[1][0] * g->sigma[2][1] - g->sigma[1][1] * g->sigma[2][0];
+
+    g->inver[0][1] = g->inver[1][0];
+    g->inver[1][1] = g->sigma[0][0] * g->sigma[2][2] - g->sigma[0][2] * g->sigma[2][0];
+    g->inver[2][1] = g->sigma[0][1] * g->sigma[2][0] - g->sigma[0][0] * g->sigma[2][1];
+
+    g->inver[0][2] = g->inver[2][0];
+    g->inver[1][2] = g->inver[2][1];
+    g->inver[2][2] = g->sigma[0][0] * g->sigma[1][1] - g->sigma[0][1] * g->sigma[1][0];
+
+    g->det = g->sigma[0][0] * g->inver[0][0] + g->sigma[0][1] * g->inver[0][1]
+           + g->sigma[0][2] * g->inver[0][2];
+
+    if (g->det < 0)
     {
-        for (int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
-        {
-            if (*hardSegmentationPixel == strokeForeground)
-            {
-                int k = 0;
-                float max = 0;
-
-                for (unsigned int i = 0; i < foregroundGMM.K(); i++)
-                {
-                    float p = foregroundGMM.p(i, *imagePixel);
-                    if (p > max)
-                    {
-                        k = i;
-                        max = p;
-                    }
-                }
-
-                *componentsPixel = k;
-            }
-            else
-            {
-                int k = 0;
-                float max = 0;
-
-                for (unsigned int i = 0; i < backgroundGMM.K(); i++)
-                {
-                    float p = backgroundGMM.p(i, *imagePixel);
-                    if (p > max)
-                    {
-                        k = i;
-                        max = p;
-                    }
-                }
-
-                *componentsPixel = k;
-            }
-        }
-    }
-
-    // Step 5: Relearn GMMs from new component assignments
-
-    // Set up Gaussian Fitters
-    GaussianFitter* backFitters = new GaussianFitter[backgroundGMM.K()];
-    GaussianFitter* foreFitters = new GaussianFitter[foregroundGMM.K()];
-
-    imagePixel = (QRgb*)image.bits();
-    componentsPixel = (QRgb*)components.bits();
-    hardSegmentationPixel = (QRgb*)hardSegmentation.bits();
-
-    unsigned int foreCount = 0, backCount = 0;
-
-    for (int y = 0; y < image.height(); y++)
-    {
-        for(int x = 0; x < image.width(); x++, imagePixel++, componentsPixel++, hardSegmentationPixel++)
-        {
-            if(*hardSegmentationPixel == strokeForeground)
-            {
-                foreFitters[*componentsPixel].add(*imagePixel);
-                foreCount++;
-            }
-            else if (*hardSegmentationPixel == strokeBackground)
-            {
-                backFitters[*componentsPixel].add(*imagePixel);
-                backCount++;
-            }
-        }
-    }
-
-    for (unsigned int i = 0; i < backgroundGMM.K(); i++)
-        backFitters[i].finalize(backgroundGMM.m_gaussians[i], backCount, false);
-
-    for (unsigned int i = 0; i < foregroundGMM.K(); i++)
-        foreFitters[i].finalize(foregroundGMM.m_gaussians[i], foreCount, false);
-
-    delete [] backFitters;
-    delete [] foreFitters;
-}
-
-
-// GaussianFitter functions
-GaussianFitter::GaussianFitter()
-{
-    memset(&s, 0, sizeof(s));
-
-    p[0][0] = 0; p[0][1] = 0; p[0][2] = 0;
-    p[1][0] = 0; p[1][1] = 0; p[1][2] = 0;
-    p[2][0] = 0; p[2][1] = 0; p[2][2] = 0;
-
-    count = 0;
-}
-
-// Add a color sample
-void GaussianFitter::add(QRgb &c)
-{
-    QRgb cCopy = c;
-
-    int cBlue  = cCopy & 0xFF;
-    cCopy >>= 8;
-    int cGreen = cCopy & 0xFF;
-    cCopy >>= 8;
-    int cRed   = cCopy & 0xFF;
-
-    s.red   += cRed;
-    s.green += cGreen;
-    s.blue  += cBlue;
-
-    p[0][0] += cRed   * cRed;
-    p[0][1] += cRed   * cGreen;
-    p[0][2] += cRed   * cBlue;
-    p[1][0] += cGreen * cRed;
-    p[1][1] += cGreen * cGreen;
-    p[1][2] += cGreen * cBlue;
-    p[2][0] += cBlue  * cRed;
-    p[2][1] += cBlue  * cGreen;
-    p[2][2] += cBlue  * cBlue;
-
-    count++;
-}
-
-// Build the gaussian out of all the added colors
-void GaussianFitter::finalize(Gaussian& g, unsigned int totalCount, bool computeEigens) const
-{
-    // Running into a singular covariance matrix is problematic. So we'll add a small epsilon
-    // value to the diagonal elements to ensure a positive definite covariance matrix.
-    const float Epsilon = (float)0.0001;
-
-    if (count==0)
-    {
-        g.pi = 0;
+        if (g->det > -MinDet)
+            g->det = -MinDet;
+        g->sqrtDet = sqrt(-g->det);
     }
     else
     {
-        // Compute mean of gaussian
-        g.mu.redF   = (float)s.red   / (count * 255);
-        g.mu.greenF = (float)s.green / (count * 255);
-        g.mu.blueF  = (float)s.blue  / (count * 255);
-
-        // Compute covariance matrix
-        g.covariance[0][0] = (float)p[0][0] / (count * 255) - g.mu.redF   * g.mu.redF + Epsilon;
-        g.covariance[0][1] = (float)p[0][1] / (count * 255) - g.mu.redF   * g.mu.greenF;
-        g.covariance[0][2] = (float)p[0][2] / (count * 255) - g.mu.redF   * g.mu.blueF;
-        g.covariance[1][0] = (float)p[1][0] / (count * 255) - g.mu.greenF * g.mu.redF;
-        g.covariance[1][1] = (float)p[1][1] / (count * 255) - g.mu.greenF * g.mu.greenF + Epsilon;
-        g.covariance[1][2] = (float)p[1][2] / (count * 255) - g.mu.greenF * g.mu.blueF;
-        g.covariance[2][0] = (float)p[2][0] / (count * 255) - g.mu.blueF  * g.mu.redF;
-        g.covariance[2][1] = (float)p[2][1] / (count * 255) - g.mu.blueF  * g.mu.greenF;
-        g.covariance[2][2] = (float)p[2][2] / (count * 255) - g.mu.blueF  * g.mu.blueF + Epsilon;
-
-        // Compute determinant of covariance matrix
-        g.determinant = g.covariance[0][0] * (g.covariance[1][1]*g.covariance[2][2]-g.covariance[1][2]*g.covariance[2][1])
-                      - g.covariance[0][1] * (g.covariance[1][0]*g.covariance[2][2]-g.covariance[1][2]*g.covariance[2][0])
-                      + g.covariance[0][2] * (g.covariance[1][0]*g.covariance[2][1]-g.covariance[1][1]*g.covariance[2][0]);
-
-        // Compute inverse (cofactor matrix divided by determinant)
-        g.inverse[0][0] =  (g.covariance[1][1]*g.covariance[2][2] - g.covariance[1][2]*g.covariance[2][1]) / g.determinant;
-        g.inverse[1][0] = -(g.covariance[1][0]*g.covariance[2][2] - g.covariance[1][2]*g.covariance[2][0]) / g.determinant;
-        g.inverse[2][0] =  (g.covariance[1][0]*g.covariance[2][1] - g.covariance[1][1]*g.covariance[2][0]) / g.determinant;
-        g.inverse[0][1] = -(g.covariance[0][1]*g.covariance[2][2] - g.covariance[0][2]*g.covariance[2][1]) / g.determinant;
-        g.inverse[1][1] =  (g.covariance[0][0]*g.covariance[2][2] - g.covariance[0][2]*g.covariance[2][0]) / g.determinant;
-        g.inverse[2][1] = -(g.covariance[0][0]*g.covariance[2][1] - g.covariance[0][1]*g.covariance[2][0]) / g.determinant;
-        g.inverse[0][2] =  (g.covariance[0][1]*g.covariance[1][2] - g.covariance[0][2]*g.covariance[1][1]) / g.determinant;
-        g.inverse[1][2] = -(g.covariance[0][0]*g.covariance[1][2] - g.covariance[0][2]*g.covariance[1][0]) / g.determinant;
-        g.inverse[2][2] =  (g.covariance[0][0]*g.covariance[1][1] - g.covariance[0][1]*g.covariance[1][0]) / g.determinant;
-
-        // The weight of the gaussian is the fraction of the number of pixels in this Gaussian to the number of
-        // pixels in all the gaussians of this GMM.
-        g.pi = (float)count/totalCount;
-
-        if (computeEigens)
-        {
-
-            Eigen::MatrixXf cov(3, 3);
-            cov(0, 0) = g.covariance[0][0];
-            cov(0, 1) = g.covariance[0][1];
-            cov(0, 2) = g.covariance[0][2];
-            cov(1, 0) = g.covariance[1][0];
-            cov(1, 1) = g.covariance[1][1];
-            cov(1, 2) = g.covariance[1][2];
-            cov(2, 0) = g.covariance[2][0];
-            cov(2, 1) = g.covariance[2][1];
-            cov(2, 2) = g.covariance[2][2];
-
-            Eigen::EigenSolver<Eigen::MatrixXf> eigen(cov);
-            g.eigenvalues[0] = eigen.eigenvalues()[0].real();
-            g.eigenvalues[1] = eigen.eigenvalues()[1].real();
-            g.eigenvalues[2] = eigen.eigenvalues()[2].real();
-
-            g.eigenvectors[0][0] = eigen.eigenvectors()(0, 0).real();
-            g.eigenvectors[0][1] = eigen.eigenvectors()(0, 1).real();
-            g.eigenvectors[0][2] = eigen.eigenvectors()(0, 2).real();
-            g.eigenvectors[1][0] = eigen.eigenvectors()(1, 0).real();
-            g.eigenvectors[1][1] = eigen.eigenvectors()(1, 1).real();
-            g.eigenvectors[1][2] = eigen.eigenvectors()(1, 2).real();
-            g.eigenvectors[2][0] = eigen.eigenvectors()(2, 0).real();
-            g.eigenvectors[2][1] = eigen.eigenvectors()(2, 1).real();
-            g.eigenvectors[2][2] = eigen.eigenvectors()(2, 2).real();
-        }
+        if (g->det < MinDet)
+            g->det = MinDet;
+        g->sqrtDet = sqrt(g->det);
     }
+
+    static double coef = sqrt(8 * M_PI * M_PI * M_PI);
+    g->coeff = 1. / (coef * g->sqrtDet);
+
+    // Обратная матрица
+    g->inver[0][0] /= g->det;        g->inver[0][1] /= g->det;        g->inver[0][2] /= g->det;
+    g->inver[1][0] = g->inver[0][1]; g->inver[1][1] /= g->det;        g->inver[1][2] /= g->det;
+    g->inver[2][0] = g->inver[0][2]; g->inver[2][1] = g->inver[1][2]; g->inver[2][2] /= g->det;
+
+    Eigen::MatrixXf cov(3,3);
+    cov(0, 0) = g->sigma[0][0]; cov(0, 1) = g->sigma[0][1]; cov(0, 2) = g->sigma[0][2];
+    cov(1, 0) = g->sigma[1][0]; cov(1, 1) = g->sigma[1][1]; cov(1, 2) = g->sigma[1][2];
+    cov(2, 0) = g->sigma[2][0]; cov(2, 1) = g->sigma[2][1]; cov(2, 2) = g->sigma[2][2];
+
+    Eigen::EigenSolver<Eigen::MatrixXf> eigen(cov);
+    g->eigenValues[0] = eigen.eigenvalues()[0].real();
+    g->eigenValues[1] = eigen.eigenvalues()[1].real();
+    g->eigenValues[2] = eigen.eigenvalues()[2].real();
+
+    g->eigenVectors[0][0] = eigen.eigenvectors()(0,0).real();
+    g->eigenVectors[0][1] = eigen.eigenvectors()(0,1).real();
+    g->eigenVectors[0][2] = eigen.eigenvectors()(0,2).real();
+    g->eigenVectors[1][0] = eigen.eigenvectors()(1,0).real();
+    g->eigenVectors[1][1] = eigen.eigenvectors()(1,1).real();
+    g->eigenVectors[1][2] = eigen.eigenvectors()(1,2).real();
+    g->eigenVectors[2][0] = eigen.eigenvectors()(2,0).real();
+    g->eigenVectors[2][1] = eigen.eigenvectors()(2,1).real();
+    g->eigenVectors[2][2] = eigen.eigenvectors()(2,2).real();
 }
 
-RgbF rgbToFloat(Rgb input)
-{
-    RgbF output;
-    output.redF   = (float)input.red   / 255;
-    output.greenF = (float)input.green / 255;
-    output.blueF  = (float)input.blue  / 255;
 
-    return output;
+QVector<float>*
+EM::Estep(Gaussian *g, int K, QList<RgbColor> &points)
+{
+    QVector<float>* G = new QVector<float>[K];
+
+    float newG;
+    QVector<float> *currP = new QVector<float>[K];
+
+    // Вычисляем текущие вероятности попадания каждой точки в тот или иной кластер
+    for (int k = 0; k < K; k++)
+    {
+        currP[k].clear();
+        currP[k].reserve(points.size());
+
+        RgbColor iter;
+        foreach (iter, points)
+        {
+            newG = g[k].w * gaussN(iter, g[k]);
+            currP[k] << newG;
+        }
+    }
+
+    // Считаем векторы скрытых переменных
+    for (int k = 0; k < K; k++)
+    {
+        G[k].clear();
+        G[k].reserve(points.size());
+
+        for(int i = 0; i < points.size(); i++)
+        {
+            newG = 0;
+
+            // знаменатель
+            for(int k_ = 0; k_ < K; k_++)
+                newG += currP[k_].at(i);
+
+            // Числитель делим на знаменатель
+            newG = currP[k].at(i) / newG;
+
+            G[k] << newG;
+        }
+    }
+
+    delete [] currP;
+
+    return G;
+}
+
+
+void
+EM::Mstep(Gaussian *g, QList<RgbColor> &points, QVector<float> &G)
+{
+    memset(g, 0, sizeof(Gaussian));
+
+    // Ссылки
+    RgbColor& mu = g->mu;
+
+    // Количество точек. Понадобится в будущем
+    int size = g->pointsCount = points.size();
+
+    /// Вычисляем новый вес
+    float gIterf;
+    foreach (gIterf, G)
+    {
+        g->w += gIterf;
+    }
+    g->w /= size;
+
+    /////////////////////////////////////////////////////////
+    /// Находим сумму и матрицу ковариаций
+    QList<RgbColor>::iterator iter;
+    QVector<float>::iterator gIter;
+
+    for (iter = points.begin(), gIter = G.begin();
+         iter != points.end() && gIter != G.end();
+         iter++, gIter++)
+    {
+        // Сумма цветов
+        mu.Rf += iter->R * *gIter;
+        mu.Gf += iter->G * *gIter;
+        mu.Bf += iter->B * *gIter;
+
+        // Для вычисления матрицы ковариаций
+        g->sigma[0][0] += iter->R * iter->R * *gIter;
+        g->sigma[0][1] += iter->R * iter->G * *gIter;
+        g->sigma[0][2] += iter->R * iter->B * *gIter;
+
+        g->sigma[1][0] += iter->G * iter->R * *gIter;
+        g->sigma[1][1] += iter->G * iter->G * *gIter;
+        g->sigma[1][2] += iter->G * iter->B * *gIter;
+
+        g->sigma[2][0] += iter->B * iter->R * *gIter;
+        g->sigma[2][1] += iter->B * iter->G * *gIter;
+        g->sigma[2][2] += iter->B * iter->B * *gIter;
+    }
+
+    g->mu.Rf /= size; g->mu.Gf /= size; g->mu.Bf /= size;
+
+    g->sigma[0][0] /= size; g->sigma[0][1] /= size; g->sigma[0][2] /= size;
+                            g->sigma[1][1] /= size; g->sigma[1][2] /= size;
+                                                    g->sigma[2][2] /= size;
+    // - Средние
+    g->sigma[0][0] -= (double)(mu.Rf * mu.Rf);
+    g->sigma[0][1] -= (double)(mu.Rf * mu.Gf);
+    g->sigma[0][2] -= (double)(mu.Rf * mu.Bf);
+
+    g->sigma[1][1] -= (double)(mu.Gf * mu.Gf);
+    g->sigma[1][2] -= (double)(mu.Gf * mu.Bf);
+
+    g->sigma[2][2] -= (double)(mu.Bf * mu.Bf);
+
+    // Копируем верхний триугольник на нижний триугольник
+    g->sigma[1][0] = g->sigma[0][1];
+    g->sigma[2][0] = g->sigma[0][2]; g->sigma[2][1] = g->sigma[1][2];
+    ///
+    /////////////////////////////////////////////////////////
+
+    g->inver[0][0] = g->sigma[1][1] * g->sigma[2][2] - g->sigma[1][2] * g->sigma[2][1];
+    g->inver[1][0] = g->sigma[1][2] * g->sigma[2][0] - g->sigma[1][0] * g->sigma[2][2];
+    g->inver[2][0] = g->sigma[1][0] * g->sigma[2][1] - g->sigma[1][1] * g->sigma[2][0];
+
+    g->inver[0][1] = g->inver[1][0];
+    g->inver[1][1] = g->sigma[0][0] * g->sigma[2][2] - g->sigma[0][2] * g->sigma[2][0];
+    g->inver[2][1] = g->sigma[0][1] * g->sigma[2][0] - g->sigma[0][0] * g->sigma[2][1];
+
+    g->inver[0][2] = g->inver[2][0];
+    g->inver[1][2] = g->inver[2][1];
+    g->inver[2][2] = g->sigma[0][0] * g->sigma[1][1] - g->sigma[0][1] * g->sigma[1][0];
+
+    g->det = g->sigma[0][0] * g->inver[0][0] + g->sigma[0][1] * g->inver[0][1]
+           + g->sigma[0][2] * g->inver[0][2];
+
+    if (g->det > 0)
+    {
+        if (g->det < MinDet)
+            g->det = MinDet;
+        g->sqrtDet = sqrt(g->det);
+    }
+    else
+    {
+        if (g->det > -MinDet)
+                    g->det = -MinDet;
+        g->sqrtDet = sqrt(-g->det);
+    }
+
+    static double coef = sqrt(8 * M_PI * M_PI * M_PI);
+    g->coeff = 1. / (coef * g->sqrtDet);
+
+    // Обратная матрица
+    g->inver[0][0] /= g->det;        g->inver[0][1] /= g->det;        g->inver[0][2] /= g->det;
+    g->inver[1][0] = g->inver[0][1]; g->inver[1][1] /= g->det;        g->inver[1][2] /= g->det;
+    g->inver[2][0] = g->inver[0][2]; g->inver[2][1] = g->inver[1][2]; g->inver[2][2] /= g->det;
+}
+
+
+Gaussian *EM::split(int K, QList<RgbColor> &points, Gaussian *g)
+{
+    float delta = deltaMax + 1;
+
+    // Работает с гауссианами
+    Gaussian* gaussians = g;
+    if (!gaussians)
+    {
+        Gaussian* gaussians = new Gaussian[K];
+        memset(gaussians, 0, sizeof(Gaussian) * K);
+    }
+
+    QVector<float>* Glast;
+    QVector<float>* G;
+
+    // Первая итерация
+    Glast = Estep(gaussians, K, points);
+    for (int k = 0; k < K; k++)
+        Mstep(gaussians + k, points, Glast[k]);
+
+    while (delta > deltaMax)
+    {
+        G = Estep(gaussians, K, points);
+        Mstep(gaussians, points, *G);
+
+        // Вычисляем ограничения по выходу
+        delta = 0;
+        for (int i = 0; i < G->size(); i++)
+        {
+            float sum = 0;
+            for (int k = 0; k < K; k++)
+            {
+                sum += (G[k][i] - Glast[k][i]) * (G[k][i] - Glast[k][i]);
+            }
+            sum = sqrt(sum);
+
+            if (sum > delta)
+                delta = sum;
+        }
+
+        delete [] Glast;
+        Glast = G;
+    }
+
+    return gaussians;
+}
+
+
+Gaussian*
+EM::splitContinious(int &K, QList<RgbColor> &points, int minPoints)
+{
+    // Создаем место под гауссианы
+    Gaussian* gaussians = new Gaussian[K];
+    memset(gaussians, 0, sizeof(Gaussian) * K);
+
+    int pointsCount = points.size();
+
+    QVector<float>* G = 0;
+
+    QVector<float> currP;
+
+    QList<RgbColor> U;
+
+    // Первый кластер
+    fitGaussian(gaussians, points);
+    gaussians[0].w = 1;
+
+    for (int k = 1; k < K; k++)
+    {
+        currP.clear();
+        currP.reserve(pointsCount);
+
+        // Поиск максимальной вероятности
+        float maxP = 0;
+        float minP = 9999999;
+        float p;
+        RgbColor iter;
+        foreach (iter, points)
+        {
+            p = 0;
+            // Поиск вероятности
+            for (int i = 0; i < k; i++)
+            {
+                p += gaussians[i].w * gaussN(iter, gaussians[i]);
+            }
+
+            // Ищем максимум
+            if (p > maxP)
+                maxP = p;
+            if (p < minP)
+                minP = p;
+
+            currP << p;
+        }
+        maxP /= R;
+
+        // Выделение нового кластера
+        U.clear();
+        U.reserve(pointsCount);
+        for (int i = 0; i < pointsCount; i++)
+            if (currP[i] < maxP)
+                U << points[i];
+
+        if (U.size() < minPoints)
+        {
+            K = k;
+
+            if (G)
+                delete [] G;
+
+            return gaussians;
+        }
+
+        // Вычисление коэффициентов
+        fitGaussian(gaussians + k, U);
+        // Новый вес
+        gaussians[k].w = (float)U.size() / points.size();
+        for (int i = 0; i < k; i++)
+            gaussians[i].w -= gaussians[k].w;
+
+        split(k + 1, points, gaussians);
+    }
+
+    return gaussians;
+}
+
+Gaussian *EM::splitNotEM(int K, QList<RgbColor> &points)
+{
+    // Создаем место под гауссианы
+    Gaussian* g = new Gaussian[K];
+    memset(g, 0, sizeof(Gaussian) * K);
+    QList<RgbColor>* cluster = new QList<RgbColor>[K];
+
+    int pointsCount = points.size();
+
+    foreach (RgbColor iter, points) {
+        cluster[0] << iter;
+    }
+    fitGaussian(g, points);
+
+    int clusterNum = 0;
+
+    for (int k = 1; k < K; k++)
+    {
+        // Разбиваем кластер
+        Gaussian &toSplit = g[clusterNum];
+        float splitPoint = toSplit.eigenVectors[0][0] * toSplit.mu.Rf
+                         + toSplit.eigenVectors[1][0] * toSplit.mu.Gf
+                         + toSplit.eigenVectors[2][0] * toSplit.mu.Bf;
+        for (int i = cluster[clusterNum].size() - 1; i > 0; i--)
+        {
+            RgbColor pixel = cluster[clusterNum][i];
+            float splitParam = toSplit.eigenVectors[0][0] * pixel.R
+                             + toSplit.eigenVectors[1][0] * pixel.G
+                             + toSplit.eigenVectors[2][0] * pixel.B;
+
+            if (splitParam > splitPoint)
+            {
+                cluster[k] << pixel;
+                cluster[clusterNum].removeAt(i);
+            }
+        }
+
+        // Пересчитываем кластеры
+        fitGaussian(g + clusterNum, cluster[clusterNum]);
+        fitGaussian(g + k, cluster[k]);
+        g[clusterNum].w = (float)cluster[clusterNum].size() / pointsCount;
+        g[k].w = (float)cluster[k].size() / pointsCount;
+
+        // Ищем, какой бы дальше разбить
+        float maxEigen = g[0].eigenValues[0];
+        clusterNum = 0;
+        for (int i = 1; i <= k; i++)
+        {
+            if (float curEigen = g[i].eigenValues[0] > maxEigen)
+            {
+                clusterNum = i;
+                maxEigen = curEigen;
+            }
+        }
+
+    }
+
+    delete [] cluster;
+
+    return g;
 }

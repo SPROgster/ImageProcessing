@@ -17,12 +17,14 @@
 	from the sink. (The original algorithm used only the former one).
 	Details will be described in my PhD thesis.
 
-	This implementation uses an adjacency list graph representation.
+	This implementation uses a forward star graph representation.
 	Memory allocation:
-		Nodes: 22 bytes + one field to hold a residual capacity
+		Nodes: 26 bytes + one field to hold a residual capacity
 		       of t-links (by default it is 'short' - 2 bytes)
-		Arcs: 12 bytes + one field to hold a residual capacity
-		      (by default it is 'short' - 2 bytes)
+		Arcs: 4 bytes + one field to hold a residual capacity
+		      (by default it is 'short' - 2 bytes), assuming that
+		      the maximum number of arcs per node (except the source
+		      and the sink) is much less than ARC_BLOCK_SIZE (1024 by default).
 	(Note that arcs are always added in pairs - in forward and reverse directions)
 
 	Example usage (computes a maxflow on the following graph):
@@ -99,9 +101,9 @@ public:
 
 	/* Type of edge weights.
 	   Can be changed to char, int, float, double, ... */
-	typedef float captype;
+	typedef short captype;
 	/* Type of total flow */
-	typedef float flowtype;
+	typedef int flowtype;
 
 	typedef void * node_id;
 
@@ -147,16 +149,44 @@ public:
 private:
 	/* internal variables and functions */
 
-	struct arc_st;
+	struct arc_forward_st;
+	struct arc_reverse_st;
+
+#define IS_ODD(a) ((int)(a) & 1)
+#define MAKE_ODD(a)  ((arc_forward *) ((int)(a) | 1))
+#define MAKE_EVEN(a) ((arc_forward *) ((int)(a) & (~1)))
+#define MAKE_ODD_REV(a)  ((arc_reverse *) ((int)(a) | 1))
+#define MAKE_EVEN_REV(a) ((arc_reverse *) ((int)(a) & (~1)))
 
 	/* node structure */
 	typedef struct node_st
 	{
-		arc_st			*first;		/* first outcoming arc */
+		/*
+			Usually i->first_out is the first outgoing
+			arc, and (i+1)->first_out-1 is the last outgoing arc.
+			However, it is not always possible, since
+			arcs are allocated in blocks, so arcs corresponding
+			to two consecutive nodes may be in different blocks.
 
-		arc_st			*parent;	/* node's parent */
+			If outgoing arcs for i are last in the arc block,
+			then a different mechanism is used. i->first_out
+			is odd in this case; the first outgoing arc
+			is (a+1), and the last outgoing arc is
+			((arc_forward *)(a->shift))-1, where
+			a = (arc_forward *) (((char *)(i->first_out)) + 1);
+
+			Similar mechanism is used for incoming arcs.
+		*/
+		arc_forward_st	*first_out;	/* first outcoming arc */
+		arc_reverse_st	*first_in;	/* first incoming arc */
+
+		arc_forward_st	*parent;	/* describes node's parent
+									   if IS_ODD(parent) then MAKE_EVEN(parent) points to 'arc_reverse',
+									   otherwise parent points to 'arc_forward' */
+
 		node_st			*next;		/* pointer to the next active node
 									   (or to itself if it is the last node in the list) */
+
 		int				TS;			/* timestamp showing when DIST was computed */
 		int				DIST;		/* distance to the terminal */
 		short			is_sink;	/* flag showing whether the node is in the source or in the sink tree */
@@ -165,15 +195,20 @@ private:
 									   otherwise         -tr_cap is residual capacity of the arc node->SINK */
 	} node;
 
-	/* arc structure */
-	typedef struct arc_st
+	/* arc structures */
+#define NEIGHBOR_NODE(i, shift) ((node *) ((char *)(i) + (shift)))
+#define NEIGHBOR_NODE_REV(i, shift) ((node *) ((char *)(i) - (shift)))
+	typedef struct arc_forward_st
 	{
-		node_st			*head;		/* node the arc points to */
-		arc_st			*next;		/* next arc with the same originating node */
-		arc_st			*sister;	/* reverse arc */
-
+		int				shift;		/* node_to = NEIGHBOR_NODE(node_from, shift) */
 		captype			r_cap;		/* residual capacity */
-	} arc;
+		captype			r_rev_cap;	/* residual capacity of the reverse arc*/
+	} arc_forward;
+
+	typedef struct arc_reverse_st
+	{
+		arc_forward		*sister;	/* reverse arc */
+	} arc_reverse;
 
 	/* 'pointer to node' structure */
 	typedef struct nodeptr_st
@@ -182,8 +217,48 @@ private:
 		nodeptr_st		*next;
 	} nodeptr;
 
-	Block<node>			*node_block;
-	Block<arc>			*arc_block;
+	typedef struct node_block_st
+	{
+		node					*current;
+		struct node_block_st	*next;
+		node					nodes[NODE_BLOCK_SIZE];
+	} node_block;
+
+#define last_node LAST_NODE.LAST_NODE
+
+	typedef struct arc_for_block_st
+	{
+		char					*start;		/* the actual start address of this block.
+											   May be different from 'this' since 'this'
+											   must be at an even address. */
+		arc_forward				*current;
+		struct arc_for_block_st	*next;
+		arc_forward				arcs_for[ARC_BLOCK_SIZE]; /* all arcs must be at even addresses */
+		union
+		{
+			arc_forward			dummy;
+			node				*LAST_NODE;	/* used in graph consruction */
+		}						LAST_NODE;
+	} arc_for_block;
+
+	typedef struct arc_rev_block_st
+	{
+		char					*start;		/* the actual start address of this block.
+											   May be different from 'this' since 'this'
+											   must be at an even address. */
+		arc_reverse				*current;
+		struct arc_rev_block_st	*next;
+		arc_reverse				arcs_rev[ARC_BLOCK_SIZE]; /* all arcs must be at even addresses */
+		union
+		{
+			arc_reverse			dummy;
+			node				*LAST_NODE;	/* used in graph consruction */
+		}						LAST_NODE;
+	} arc_rev_block;
+
+	node_block			*node_block_first;
+	arc_for_block		*arc_for_block_first;
+	arc_rev_block		*arc_rev_block_first;
 	DBlock<nodeptr>		*nodeptr_block;
 
 	void	(*error_function)(char *);	/* this function is called if a error occurs,
@@ -204,8 +279,9 @@ private:
 	void set_active(node *i);
 	node *next_active();
 
+	void prepare_graph();
 	void maxflow_init();
-	void augment(arc *middle_arc);
+	void augment(node *s_start, node *t_start, captype *cap_middle, captype *rev_cap_middle);
 	void process_source_orphan(node *i);
 	void process_sink_orphan(node *i);
 };

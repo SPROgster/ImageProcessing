@@ -1,83 +1,87 @@
 #ifndef GMM_H
 #define GMM_H
 
-#include <QColor>
-
-struct Rgb
-{
-    int red, green, blue;
-};
-
-struct RgbF
-{
-    float redF, greenF, blueF;
-};
+#include "config.h"
+#include <QVector>
+#include <QImage>
 
 struct Gaussian
 {
-    RgbF mu;					// mean of the gaussian
-    float covariance[3][3];		// covariance matrix of the gaussian
-    float determinant;			// determinant of the covariance matrix
-    float inverse[3][3];			// inverse of the covariance matrix
-    float pi;					// weighting of this gaussian in the GMM.
+    double w;            // Вес гауссиана
+    RgbColor mu;        // Среднее
+    double sigma[3][3];  // Матрица ковариаций [i][j]
+    double det;          // Определитель матрицы ковариаций
+    double sqrtDet;      // Квадрат определителя
+    double inver[3][3];  // Матрица обратная к матрице ковариаций
+    int pointsCount;    // Количество точек
+    double coeff;
 
-    // These are only needed during Orchard and Bouman clustering.
-    float eigenvalues[3];		// eigenvalues of covariance matrix
-    float eigenvectors[3][3];	// eigenvectors of   "          "
+    double eigenValues[3];
+    double eigenVectors[3][3];
 };
+
+float gaussN(RgbColor x, const Gaussian& g);
+Gaussian* EMclustering(Gaussian* gaussians, const int K, const float delta);
 
 class GMM
 {
 public:
-
-    // Initialize GMM with number of gaussians desired.
-    GMM(unsigned int K);
+    GMM(int k = 5);
     ~GMM();
 
-    unsigned int K() const { return m_K; }
+    void loadImage(QImage &image_);
+    void loadPoints(QImage &points);
+    void finalize();
 
-    // Returns the probability density of color c in this GMM
-    float p(QRgb c);
+    float p(RgbColor x);
+    float p(QRgb x);
 
 private:
+    int K;              // Число гауссиан. По крайней мере пока задается
+    int pointsCount;    // Количество точек. Может понадобится в будущем
 
-    // Returns the probability density of color c in just Gaussian k
-    float p(unsigned int i, QRgb c);
+    QImage* image;
 
-    unsigned int m_K;		// number of gaussians
-    Gaussian* m_gaussians;	// an array of K gaussians
+    Gaussian * g;
+    QList<RgbColor> pointsList;
 
-    friend void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage& hardSegmentation);
-    friend void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
+    inline float p(int i, RgbColor x)
+    {
+        return g[i].w * gaussN(x, g[i]);
+    }
+
+    friend class EM;
 };
 
-// Build the initial GMMs using the Orchard and Bouman color clustering algorithm
-void buildGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, QImage &hardSegmentation);
-
-// Iteratively learn GMMs using GrabCut updating algorithm
-void learnGMMs(GMM& backgroundGMM, GMM& foregroundGMM, QImage& components, const QImage& image, const QImage& hardSegmentation);
-
-
-// Helper class that fits a single Gaussian to color samples
-class GaussianFitter
+class EM
 {
-public:
-    GaussianFitter();
-
-    // Add a color sample
-    void add(QRgb &c);
-
-    // Build the gaussian out of all the added color samples
-    void finalize(Gaussian& g, unsigned int totalCount, bool computeEigens = false) const;
-
 private:
 
-    Rgb s;              // sum of r,g, and b
-    int  p[3][3];		// matrix of products (i.e. r*r, r*g, r*b), some values are duplicated.
+    GMM* gmmParent;
 
-    unsigned int count;	// count of color samples added to the gaussian
+    float R;                // Параметр разбиения вероятности
+    float deltaMax;         // Параметр, по которому выходим из EM
+
+    float* computeG(Gaussian);
+    void fitGaussian(Gaussian *g, QList<RgbColor> &points);
+
+    /// EM шаги
+    // E шаг
+    QVector<float>* Estep(Gaussian *g, int K, QList<RgbColor> &points);
+
+    // M шаг
+    void Mstep(Gaussian* g, QList<RgbColor> &points, QVector<float> &G);
+
+public:
+    EM(GMM* gmm = 0, float delta = 0.0005, float R_ = 2) :
+        gmmParent(gmm), R(R_), deltaMax(delta)  {}
+
+    // Обычный EM алгоритм
+    Gaussian* split(int K, QList<RgbColor> &points, Gaussian* g = 0);
+    // EM с последовательным добавлением элементов
+    Gaussian* splitContinious(int &K, QList<RgbColor> &points, int minPoints = 0);
+
+    Gaussian* splitNotEM(int K, QList<RgbColor> &points);
 };
-
-RgbF rgbToFloat(Rgb input);
 
 #endif // GMM_H

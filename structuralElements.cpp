@@ -12,6 +12,7 @@ ring        (int radius, const QColor color)
     QPainter painter;
 
     painter.begin(ring);
+    painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setPen(color);
 
     painter.drawEllipse(0, 0, size, size);
@@ -32,6 +33,7 @@ disk        (int radius, const QColor color)
     QPainter painter;
 
     painter.begin(disk);
+    painter.setRenderHint(QPainter::Antialiasing, false);
     painter.setPen(color);
     painter.setBrush(QColor(color));
 

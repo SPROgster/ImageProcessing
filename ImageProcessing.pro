@@ -18,14 +18,17 @@ SOURCES += main.cpp\
     structuralElements.cpp \
     gmm.cpp \
     graph.cpp \
-    progressiveCut.cpp
+    progressiveCut.cpp \
+    maxflow.cpp
 
 HEADERS  += mainwindow.h \
     imageentry.h \
     structuralElements.h \
     gmm.h \
     graph.h \
-    progressiveCut.h
+    progressiveCut.h \
+    block.h \
+    config.h
 
 FORMS    += mainwindow.ui
 

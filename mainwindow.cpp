@@ -120,6 +120,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             if(event->type() == QEvent::MouseButtonPress)
             {
                 maskingDrawing = true;
+                maskIsEmpty = false;
 
                 QMouseEvent* mouseEvent = (QMouseEvent*)event;
 
@@ -195,17 +196,15 @@ void MainWindow::buttonForegroundClicked()
 {
     if (graphCreated)
     {
-        segmentForegroundNew = true;
-
-        progressiveCut->updateForeground(*selectionAlpha);
+        segmentForegroundNew = progressiveCut->updateForeground(*selectionAlpha);
 
         maskCancelButtonClicked();
+
+        ui->maskButton->setEnabled(false);
     }
     else
     {
-        segmentForegroundNew = true;
-
-        progressiveCut->setForeground(*selectionAlpha);
+        segmentForegroundNew = progressiveCut->setForeground(*selectionAlpha);
 
         maskCancelButtonClicked();
     }
@@ -215,17 +214,15 @@ void MainWindow::buttonBackgroundClicked()
 {
     if (graphCreated)
     {
-        segmentBackgroundNew = true;
-
-        progressiveCut->updateBackground(*selectionAlpha);
+        segmentBackgroundNew = progressiveCut->updateBackground(*selectionAlpha);
 
         maskCancelButtonClicked();
+
+        ui->maskButton->setEnabled(false);
     }
     else
     {
-        segmentBackgroundNew = true;
-
-        progressiveCut->setBackground(*selectionAlpha);
+        segmentBackgroundNew = progressiveCut->setBackground(*selectionAlpha);
 
         maskCancelButtonClicked();
     }
@@ -245,7 +242,14 @@ void MainWindow::buttonCreateGraphClicked()
         segmentBackgroundNew = false;
         segmentForegroundNew = false;
 
+        //progressiveCut->setImageOutput(ui->imageView);
         progressiveCut->updateGraph();
+
+        delete image;
+        image = new QImage(*progressiveCut->selection);
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
+
+        ui->maskButton->setEnabled(true);
     }
     else
     {
@@ -263,8 +267,12 @@ void MainWindow::buttonCreateGraphClicked()
             return;
         }
 
-        progressiveCut->setImageOutput(ui->imageView);
+        //progressiveCut->setImageOutput(ui->imageView);
         progressiveCut->createGraph();
+
+        delete image;
+        image = new QImage(*progressiveCut->selection);
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
         graphCreated = true;
         segmentBackgroundNew = false;

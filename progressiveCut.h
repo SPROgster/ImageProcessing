@@ -1,13 +1,11 @@
 #ifndef PROGRESSIVECUT_H
 #define PROGRESSIVECUT_H
 
-#define GMM_K 8
-const float sigma = 50;
-
 #include <QImage>
 #include <QVector>
 #include <QLabel>       // Для отладки
 #include <QPixmap>      // Для отладки
+#include <QPainter>     // Для отладки
 #include <math.h>
 
 #include "graph.h"
@@ -19,10 +17,15 @@ class ProgressiveCut
 {
 private:
     Graph* graph;
+    Graph::node_id* nodes;
+
     QImage* image;
     QImage* foregroundSelection;
     QImage* backgroundSelection;
     QImage* strokeSelection;
+    QImage* strokeSelectionNew;
+    QImage* foregroundStroke;
+    QImage* backgroundStroke;
 
     QVector<QRgb> maskColorTable;
     QVector<QRgb> strokeColorTable;
@@ -49,6 +52,8 @@ public:
     ProgressiveCut(const QImage& imageToCut);
     ~ProgressiveCut();
 
+    QImage* selection;
+
     void setImage(const QImage& imageToCut);
     bool setForeground(const QImage& foreground);
     bool setBackground(const QImage& background);
@@ -56,8 +61,12 @@ public:
     bool updateForeground(const QImage& foreground);
     bool updateBackground(const QImage& background);
 
+    void deleteUpdation();
+
+    void connectNodes();
+
     bool createGraph();
-    void updateGraph();
+    bool updateGraph();
 
     void setImageOutput(QLabel* imageView);
 
@@ -71,17 +80,17 @@ protected:
     }
 
     inline float
-    norma2(const RgbF a, const RgbF b)
+    norma2(const RgbColor a, const RgbColor b)
     {
-        float red  = a.redF   - b.redF;
-        float green= a.greenF - b.greenF;
-        float blue = a.blueF  - b.blueF;
+        float red  = a.R - b.R;
+        float green= a.G - b.G;
+        float blue = a.B - b.B;
 
-        return (red * red + green * green + blue * blue);
+        return (red * red + green * green + blue * blue) / (255. * 255.);
     }
 
     float
-    Bpq(const QRgb a, const int xa, const int ya, const QRgb b, const int xb, const int yb, const float delta);
+    Bpq(const QRgb a, const int xa, const int ya, const QRgb b, const int xb, const int yb);
 };
 
 
