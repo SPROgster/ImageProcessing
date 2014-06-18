@@ -1,4 +1,5 @@
 #include <QMessageBox>
+#include <QPen>
 #include <limits>
 
 #include "progressiveCut.h"
@@ -229,7 +230,63 @@ bool ProgressiveCut::createGraph()
 
 bool ProgressiveCut::updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize)
 {
+    createLinesFromXy(cursorWay, strokeSize);
     return createGraph();
+}
+
+void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize)
+{
+    QPainter painter;
+    QPainter painterAreaMask;
+
+    QImage* newStroke = new QImage(imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied);
+    newStroke->setColorTable(maskColorTable);
+    newStroke->fill(0);
+    QImage* areaMask = new QImage(imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied);
+    areaMask->setColorTable(maskColorTable);
+    areaMask->fill(0);
+
+    painter.begin(newStroke);
+    QPen strokePen;
+    strokePen.setColor(QColor(maskColorTable[1]));
+    strokePen.setWidth(strokeSize);
+    strokePen.setCapStyle(Qt::RoundCap);
+    painter.setPen(strokePen);
+    painterAreaMask.begin(areaMask);
+    QPen areaPen;
+    areaPen.setColor(QColor(maskColorTable[1]));
+    areaPen.setWidth(strokeSize);
+    areaPen.setCapStyle(Qt::RoundCap);
+    painterAreaMask.setPen(areaPen);
+    painterAreaMask.setPen(QPen(QBrush(QColor(maskColorTable[1])), strokeSize * 5));
+
+    QVector<xy>::iterator iter = cursorWay.begin();
+    xy lastPos = *iter;
+
+    for(iter++; iter != cursorWay.end(); iter++)
+    {
+        painter.drawLine(lastPos.x, lastPos.y, iter->x, iter->y);
+        painterAreaMask.drawLine(lastPos.x, lastPos.y, iter->x, iter->y);
+        lastPos = *iter;
+    }
+
+    painter.end();
+    painterAreaMask.end();
+
+    if (imageOutput)
+    {
+        imageOutput->setPixmap(QPixmap::fromImage(*newStroke));
+        QMessageBox(QMessageBox::NoIcon, "Отладка", "newStoke").exec();
+    }
+
+    if (imageOutput)
+    {
+        imageOutput->setPixmap(QPixmap::fromImage(*areaMask));
+        QMessageBox(QMessageBox::NoIcon, "Отладка", "areaMask").exec();
+    }
+
+    delete newStroke;
+    delete areaMask;
 }
 
 void ProgressiveCut::setImageOutput(QLabel *imageView)

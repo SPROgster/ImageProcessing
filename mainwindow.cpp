@@ -182,6 +182,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 if (graphCreated)
                 {
+                    progressiveCut->setImageOutput(ui->imageView);
                     xy pos;
                     pos.x = x;
                     pos.y = y;
