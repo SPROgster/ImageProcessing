@@ -227,7 +227,7 @@ bool ProgressiveCut::createGraph()
     return true;
 }
 
-bool ProgressiveCut::updateGraph()
+bool ProgressiveCut::updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize)
 {
     return createGraph();
 }

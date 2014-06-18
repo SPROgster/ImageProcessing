@@ -117,25 +117,36 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     {
         if (obj == (QObject*)(ui->imageView))
         {
+            QMouseEvent* mouseEvent = (QMouseEvent*)event;
+
+            int x = mouseEvent->x() - maskValue + 1;
+            int y = mouseEvent->y() - maskValue + 1;
+
             if(event->type() == QEvent::MouseButtonPress)
             {
                 maskingDrawing = true;
                 maskIsEmpty = false;
 
-                QMouseEvent* mouseEvent = (QMouseEvent*)event;
-
-                int x = mouseEvent->x() - maskValue + 1;
-                int y = mouseEvent->y() - maskValue + 1;
+                if (graphCreated)
+                {
+                    cursorWay.clear();
+                    xy pos;
+                    pos.x = x;
+                    pos.y = y;
+                    cursorWay << pos;
+                }
+                else
+                {
+                    QPainter painterAlpha(selectionAlpha);
+                    painterAlpha.save();
+                    painterAlpha.drawImage(x, y, *maskImageAlpha);
+                    painterAlpha.restore();;
+                }
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
                 painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
-
-                QPainter painterAlpha(selectionAlpha);
-                painterAlpha.save();
-                painterAlpha.drawImage(x, y, *maskImageAlpha);
-                painterAlpha.restore();
 
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
             }
@@ -143,26 +154,42 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             {
                 maskIsEmpty = false;
 
-                QMouseEvent* mouseEvent = (QMouseEvent*)event;
-
-                int x = mouseEvent->x() - maskValue + 1;
-                int y = mouseEvent->y() - maskValue + 1;
+                if (graphCreated)
+                {
+                    xy pos;
+                    pos.x = x;
+                    pos.y = y;
+                    cursorWay << pos;
+                }
+                else
+                {
+                    QPainter painterAlpha(selectionAlpha);
+                    painterAlpha.save();
+                    painterAlpha.drawImage(x, y, *maskImageAlpha);
+                    painterAlpha.restore();
+                }
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
                 painterUi.drawImage(x, y, *maskImage);
                 painterUi.restore();
 
-                QPainter painterAlpha(selectionAlpha);
-                painterAlpha.save();
-                painterAlpha.drawImage(x, y, *maskImageAlpha);
-                painterAlpha.restore();
-
                 ui->imageView->setPixmap(QPixmap::fromImage(*maskedImage));
             }
             else if(event->type() == QEvent::MouseButtonRelease)
             {
                 maskingDrawing = false;
+
+                if (graphCreated)
+                {
+                    xy pos;
+                    pos.x = x;
+                    pos.y = y;
+                    cursorWay << pos;
+
+                    ui->maskButton->setChecked(false);
+                    maskButtonClicked(false);
+                }
             }
         }
     }
@@ -201,6 +228,14 @@ void MainWindow::buttonForegroundClicked()
         maskCancelButtonClicked();
 
         ui->maskButton->setEnabled(false);
+
+        if (cursorWay.size() > 0)
+        {
+            progressiveCut->updateGraph(cursorWay, true, maskValue);
+            cursorWay.clear();
+        }
+
+        ui->maskButton->setEnabled(true);
     }
     else
     {
@@ -219,6 +254,14 @@ void MainWindow::buttonBackgroundClicked()
         maskCancelButtonClicked();
 
         ui->maskButton->setEnabled(false);
+
+        if (cursorWay.size() > 0)
+        {
+            progressiveCut->updateGraph(cursorWay, false, maskValue);
+            cursorWay.clear();
+        }
+
+        ui->maskButton->setEnabled(true);
     }
     else
     {
@@ -232,7 +275,7 @@ void MainWindow::buttonCreateGraphClicked()
 {
     if (graphCreated)
     {
-        if (!segmentBackgroundNew && !segmentForegroundNew)
+        /*if (!segmentBackgroundNew && !segmentForegroundNew)
         {
             QMessageBox(QMessageBox::Critical, "Невозможно обновить граф", "Нет новых мазков").exec();
 
@@ -243,12 +286,12 @@ void MainWindow::buttonCreateGraphClicked()
         segmentForegroundNew = false;
 
         //progressiveCut->setImageOutput(ui->imageView);
-        progressiveCut->updateGraph();
+        progressiveCut->updateGraph(cursorWay);
 
         delete image;
         image = new QImage(*progressiveCut->selection);
         ui->imageView->setPixmap(QPixmap::fromImage(*image));
-
+        */
         ui->maskButton->setEnabled(true);
     }
     else
@@ -277,6 +320,8 @@ void MainWindow::buttonCreateGraphClicked()
         graphCreated = true;
         segmentBackgroundNew = false;
         segmentForegroundNew = false;
+
+        ui->buttonGraph->setEnabled(false);
     }
 }
 

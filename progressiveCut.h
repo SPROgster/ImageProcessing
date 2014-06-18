@@ -8,6 +8,7 @@
 #include <QPainter>     // Для отладки
 #include <math.h>
 
+#include "config.h"
 #include "graph.h"
 #include "gmm.h"
 
@@ -66,7 +67,7 @@ public:
     void connectNodes();
 
     bool createGraph();
-    bool updateGraph();
+    bool updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize);
 
     void setImageOutput(QLabel* imageView);
 

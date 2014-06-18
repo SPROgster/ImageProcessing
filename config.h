@@ -7,6 +7,11 @@ struct RgbColor
     float Rf, Gf, Bf;
 };
 
+struct xy
+{
+    int x, y;
+};
+
 #define GMM_K 5
 #define MinDet 1e-6
 

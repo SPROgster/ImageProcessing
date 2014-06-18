@@ -7,6 +7,7 @@
 #include <QMainWindow>
 #include <QSpacerItem>
 
+#include "config.h"
 #include "imageentry.h"
 #include "progressiveCut.h"
 
@@ -71,6 +72,8 @@ private:
     QCursor* maskCursor;
 
     QImage* maskedImage;
+
+    QVector<xy> cursorWay;
 
     //Выделение
 private:
