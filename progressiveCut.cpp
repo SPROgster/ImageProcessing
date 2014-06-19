@@ -289,6 +289,114 @@ void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize)
     delete areaMask;
 }
 
+QImage *ProgressiveCut::maskGradient(QImage *origin)
+{
+    // Результат
+    QImage* mask = new QImage(imageWidth, imageHeight, QImage::Format_Indexed8);
+    mask->setColorTable(maskColorTable);
+
+    //////////////////////////////////////////////////////////////
+    /// Вычисление градиента
+    ///
+    {
+    /// Первая строчка
+    uchar* pixel = mask->bits();
+    uchar* y1;
+    uchar* y2 = origin->bits();
+    uchar* y3 = origin->scanLine(1);
+
+    // Левый верхний угол
+    int gradient = abs(-(*y2 + *(y2 + 1)) + (*y3      + *(y3 + 1)))
+                 + abs(-(*y2 + *y3)       + *(y2 + 1) + *(y3 + 1));
+    *pixel = (gradient > 0) ? 1 : 0;
+    pixel++; y2++; y3++;
+    // Элементы первой строки, кроме крайних
+    for (int x = 1; x < imageWidth - 1; x++,
+                                        y2++, y3++,
+                                        pixel++)
+    {
+        // Вычисляем приближенное значение градиента
+        gradient = abs(-((*(y2 - 1)) + 2 * (*y2) + (*(y2 + 1)))
+                       + (*(y3 - 1)) + 2 * (*y3) + (*(y3 + 1)))
+                 + abs(-((*(y2 - 1)) + (*(y3 - 1)))
+                       + (*(y2 + 1)) + (*(y3 + 1)));
+        *pixel = (gradient > 0) ? 1 : 0;
+
+    }
+    // Верхний правый элемент
+    gradient = abs(-(*(y2 - 1) + *y2      ) + *(y3 - 1) + *y3)
+             + abs(-(*(y2 - 1) + *(y3 - 1)) +  *y2      + *y3);
+    *pixel = (gradient > 0) ? 1 : 0;
+
+    /// Строки со второй, кроме последней
+    y1 = origin->bits();
+    pixel++; y2++; y3++;
+
+    for (int y = 1; y < imageHeight - 1; y++)
+    {
+        // Первая точка в строке
+        gradient = abs(-(*y1 + *(y1 + 1)) + (*y3      + *(y3 + 1)))
+                 + abs(-(*y1 + *y3)       + *(y1 + 1) + *(y3 + 1));
+        *pixel = (gradient > 0) ? 1 : 0;
+
+        y1++; y2++; y3++; pixel++;
+
+        // Внутренние точки
+        for (int x = 1; x < imageWidth - 1; x++,
+                                            y1++, y2++, y3++,
+                                            pixel++)
+        {
+            gradient = abs(-(*(y1 - 1) + 2 * (*y1) + *(y1 + 1))
+                           + *(y3 - 1) + 2 * (*y3) + *(y3 + 1) )
+                     + abs(-(*(y1 - 1) + 2 * (*(y2 - 1)) + *(y3 - 1))
+                           + *(y1 + 1) + 2 * (*(y2 + 1)) + *(y3 + 1));
+            *pixel = (gradient > 0) ? 1 : 0;
+        }
+
+        // Последняя точка в строке
+        gradient = abs(-(*(y1 - 1) + *y1      ) + *(y3 - 1) + *y3)
+                 + abs(-(*(y1 - 1) + *(y3 - 1)) +  *y1      + *y3);
+        *pixel = (gradient > 0) ? 1 : 0;
+
+        y1++; y2++; y3++; pixel++;
+    }
+
+    /// Последняя строка
+    // Левый нижний угол
+    gradient = abs(-(*y1 + *(y1 + 1)) + (*y2      + *(y2 + 1)))
+             + abs(-(*y1 +  *y2)      + *(y1 + 1) + *(y2 + 1));
+    *pixel = (gradient > 0) ? 1 : 0;
+    pixel++; y1++; y2++;
+    // Элементы первой строки, кроме крайних
+    for (int x = 1; x < imageWidth - 1; x++,
+                                        y1++, y2++,
+                                        pixel++)
+    {
+        // Вычисляем приближенное значение градиента
+        gradient = abs(-((*(y1 - 1)) + 2 * (*y1) + (*(y1 + 1)))
+                       + (*(y2 - 1)) + 2 * (*y2) + (*(y2 + 1)))
+                 + abs(-((*(y1 - 1)) + (*(y2 - 1)))
+                       + (*(y1 + 1)) + (*(y2 + 1)));
+        *pixel = (gradient > 0) ? 1 : 0;
+
+    }
+    // Правый нижний элемент
+    gradient = abs(-(*(y1 - 1) + *y1      ) + *(y2 - 1) + *y2)
+             + abs(-(*(y1 - 1) + *(y2 - 1)) +  *y1      + *y2);
+    *pixel = (gradient > 0) ? 1 : 0;
+    }
+    ///
+    //////////////////////////////////////////////////////////////
+
+    if (imageOutput)
+    {
+        imageOutput->setPixmap(QPixmap::fromImage(*mask));
+        QMessageBox(QMessageBox::Information, "Отладка", "maskGradient").exec();
+    }
+
+    return mask;
+}
+
 void ProgressiveCut::setImageOutput(QLabel *imageView)
 {
     imageOutput = imageView;

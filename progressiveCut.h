@@ -40,6 +40,9 @@ private:
     // Две маски вливаются в одну
     int createStrokeMask();
 
+    void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize);
+    QImage* maskGradient(QImage *origin);
+
     //GMM
     GMM* gmmBackground;
     GMM* gmmForeground;
@@ -68,8 +71,6 @@ public:
 
     bool createGraph();
     bool updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize);
-
-    void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize);
 
     void setImageOutput(QLabel* imageView);
 
