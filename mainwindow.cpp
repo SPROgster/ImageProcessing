@@ -131,8 +131,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 {
                     cursorWay.clear();
                     xy pos;
-                    pos.x = x;
-                    pos.y = y;
+                    pos.x = x + 1;
+                    pos.y = y + 1;
                     cursorWay << pos;
                 }
                 else
@@ -157,8 +157,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 if (graphCreated)
                 {
                     xy pos;
-                    pos.x = x;
-                    pos.y = y;
+                    pos.x = x + 1;
+                    pos.y = y + 1;
                     cursorWay << pos;
                 }
                 else
@@ -182,13 +182,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 if (graphCreated)
                 {
-                    progressiveCut->setImageOutput(ui->imageView);
+                    //progressiveCut->setImageOutput(ui->imageView);
                     xy pos;
-                    pos.x = x;
-                    pos.y = y;
+                    pos.x = x + 1;
+                    pos.y = y + 1;
                     cursorWay << pos;
 
                     ui->maskButton->setChecked(false);
+                    ui->maskButton->setEnabled(false);
                     maskButtonClicked(false);
                 }
             }
@@ -234,6 +235,10 @@ void MainWindow::buttonForegroundClicked()
         {
             progressiveCut->updateGraph(cursorWay, true, maskValue);
             cursorWay.clear();
+
+            delete image;
+            image = new QImage(*progressiveCut->selection);
+            ui->imageView->setPixmap(QPixmap::fromImage(*image));
         }
 
         ui->maskButton->setEnabled(true);
@@ -258,8 +263,13 @@ void MainWindow::buttonBackgroundClicked()
 
         if (cursorWay.size() > 0)
         {
+            progressiveCut->setImageOutput(ui->imageView);
             progressiveCut->updateGraph(cursorWay, false, maskValue);
             cursorWay.clear();
+
+            delete image;
+            image = new QImage(*progressiveCut->selection);
+            ui->imageView->setPixmap(QPixmap::fromImage(*image));
         }
 
         ui->maskButton->setEnabled(true);

@@ -66,34 +66,72 @@ int ProgressiveCut::createStrokeMask()
     return 0;
 }
 
-void ProgressiveCut::connectNodes()
+void ProgressiveCut::connectNodes(bool update, bool foreground)
 {
     // Соединяем пиксели со стоком и истоком
     uchar* forePixel = foregroundStroke->bits();
     uchar* backPixel = backgroundStroke->bits();
     QRgb* imagePixel = (QRgb*)image->bits();
-
-    for (int i = 0; i < imageSizeInPixels; i++, backPixel++, forePixel++, imagePixel++)
+    if (update && foreground)
     {
-        float back, fore;
+        uchar* oldForePixel = foregroundSelection->bits();
 
-        if (*backPixel)
+        for (int i = 0; i < imageSizeInPixels; i++, backPixel++, forePixel++, imagePixel++, oldForePixel++)
         {
-            back = infinity;
-            fore = 0;
-        }
-        else if (*forePixel)
-        {
-            back = 0;
-            fore = infinity;
-        }
-        else
-        {
-            back = -log(gmmBackground->p(*imagePixel));
-            fore = -log(gmmForeground->p(*imagePixel));
-        }
+            float back, fore;
 
-        graph->set_tweights(nodes[i], fore, back);
+            if (*backPixel)
+            {
+                back = infinity;
+                fore = 0;
+            }
+            else if (*forePixel || (*oldForePixel))
+            {
+                back = 0;
+                fore = infinity;
+            }
+            else
+            {
+                back = -log(gmmBackground->p(*imagePixel));
+                fore = -log(gmmForeground->p(*imagePixel));
+            }
+
+            graph->set_tweights(nodes[i], fore, back);
+        }
+    }
+    else
+    {
+        lastWeights.clear();
+        for (int i = 0; i < imageSizeInPixels; i++, backPixel++, forePixel++, imagePixel++)
+        {
+            float back, fore;
+
+            if (*backPixel)
+            {
+                back = infinity;
+                fore = 0;
+            }
+            else if (*forePixel)
+            {
+                back = 0;
+                fore = infinity;
+            }
+            else
+            {
+                back = -log(gmmBackground->p(*imagePixel));
+                fore = -log(gmmForeground->p(*imagePixel));
+            }
+
+            Weight w;
+            memset(&w, 0, sizeof(Weight));
+
+            w.toSource = fore;
+            w.toSource = back;
+
+            lastWeights << w;
+
+            graph->set_tweights(nodes[i], fore, back);
+        }
     }
 
     // Ветки меж пикселями
@@ -107,26 +145,38 @@ void ProgressiveCut::connectNodes()
     {
         for (int x = 0; x < imageWidth - 1; x++, imagePixel++, i++, iRight++, iAbove++)
         {
+            Weight &w = lastWeights[i];
             // Вниз влево
             if (x > 0)
             {
                 weight = Bpq(*imagePixel, x, y, *(imagePixel + imageWidth - 1), x - 1, y + 1);
+                w.BL = weight;
                 graph->add_edge(nodes[i], nodes[iAbove - 1], weight, weight);
             }
+
             // Вниз
             weight = Bpq(*imagePixel, x, y, *(imagePixel + imageWidth), x, y + 1);
+            w.BB = weight;
             graph->add_edge(nodes[i], nodes[iAbove], weight, weight);
+
             // Вниз вправо
             weight = Bpq(*imagePixel, x, y, *(imagePixel + imageWidth + 1), x + 1, y + 1);
+            w.BR = weight;
             graph->add_edge(nodes[i], nodes[iAbove + 1], weight, weight);
+
             // Вправо
             weight = Bpq(*imagePixel, x, y, *(imagePixel + 1), x + 1, y);
+            w.RR = weight;
             graph->add_edge(nodes[i], nodes[iRight], weight, weight);
         }
+        // Вниз влево
         weight = Bpq(*imagePixel, imageWidth - 1, y, *(imagePixel + imageWidth - 1), imageWidth - 2, y + 1);
+        lastWeights[i].BL = weight;
         graph->add_edge(nodes[i], nodes[iAbove - 1], weight, weight);
+
         // Вниз
         weight = Bpq(*imagePixel, imageWidth - 1, y, *(imagePixel + imageWidth), imageWidth - 1, y + 1);
+        lastWeights[i].BB = weight;
         graph->add_edge(nodes[i], nodes[iAbove], weight, weight);
 
         imagePixel++; i++; iAbove++; iRight++;
@@ -135,6 +185,7 @@ void ProgressiveCut::connectNodes()
     for (int x = 0; x < imageWidth - 1; x++, imagePixel++, i++, iRight++, iAbove++)
     {
         weight = Bpq(*imagePixel, x, imageHeight, *(imagePixel + 1), x + 1, imageHeight);
+        lastWeights[i].RR = weight;
         graph->add_edge(nodes[i], nodes[iRight], weight, weight);
     }
 }
@@ -230,35 +281,106 @@ bool ProgressiveCut::createGraph()
 
 bool ProgressiveCut::updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize)
 {
-    createLinesFromXy(cursorWay, strokeSize);
-    return createGraph();
+    if (nodes)
+        delete [] nodes;
+    if (graph)
+        delete graph;
+
+    graph = new Graph();
+    nodes = new Graph::node_id[imageSizeInPixels];
+    for (int i = 0; i < imageSizeInPixels; i++)
+        nodes[i] = graph->add_node();
+
+    gmmForeground = new GMM(GMM_K);
+    gmmBackground = new GMM(GMM_K);
+
+    gmmForeground->loadImage(*image);
+    gmmBackground->loadImage(*image);
+
+    gmmForeground->loadPoints(*foregroundStroke);
+    gmmBackground->loadPoints(*backgroundStroke);
+
+    gmmBackground->finalize();
+    gmmForeground->finalize();
+
+    connectNodes(true, foreground);
+
+    graph->maxflow();
+
+    if (backgroundSelection)
+        delete backgroundSelection;
+    backgroundSelection = new QImage(imageWidth, imageHeight, QImage::Format_Indexed8);
+    backgroundSelection->setColorTable(maskColorTable);
+    if (foregroundSelection)
+        delete foregroundSelection;
+    foregroundSelection = new QImage(imageWidth, imageHeight, QImage::Format_Indexed8);
+    foregroundSelection->setColorTable(maskColorTable);
+
+    uchar* strokeSelectionPixel = strokeSelection->bits();
+    uchar* backgroundSelectionPixel = backgroundSelection->bits();
+    uchar* foregroundSelectionPixel = foregroundSelection->bits();
+
+    for (int i = 0; i < imageSizeInPixels; i++, strokeSelectionPixel++, backgroundSelectionPixel++, foregroundSelectionPixel++)
+    {
+        if (*strokeSelectionPixel == noStroke)
+        {
+            bool isForeground = (graph->what_segment(nodes[i]) == Graph::SINK);
+            if (isForeground)
+            {
+                *backgroundSelectionPixel = 0;
+                *foregroundSelectionPixel = 1;
+            }
+            else
+            {
+                *backgroundSelectionPixel = 1;
+                *foregroundSelectionPixel = 0;
+            }
+        }
+        else if (*strokeSelectionPixel == strokeBackground)
+        {
+            *backgroundSelectionPixel = 1;
+            *foregroundSelectionPixel = 0;
+        }
+        else if (*strokeSelectionPixel == strokeForeground)
+        {
+            *foregroundSelectionPixel = 1;
+            *backgroundSelectionPixel = 0;
+        }
+    }
+
+    if (selection)
+        delete selection;
+    selection = new QImage(*image);
+
+    QPainter painter;
+    painter.begin(selection);
+    painter.drawImage(0, 0, *backgroundSelection);
+    painter.end();
+
+    delete [] nodes;
+    nodes = 0;
+    delete graph;
+    graph = 0;
+
+    return true;
 }
 
-void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize)
+void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize, bool isForeground)
 {
-    QPainter painter;
-    QPainter painterAreaMask;
-
+    // Рисование области
     QImage* newStroke = new QImage(imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied);
     newStroke->setColorTable(maskColorTable);
     newStroke->fill(0);
-    QImage* areaMask = new QImage(imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied);
-    areaMask->setColorTable(maskColorTable);
-    areaMask->fill(0);
+
+    {
+    QPainter painter;
 
     painter.begin(newStroke);
     QPen strokePen;
     strokePen.setColor(QColor(maskColorTable[1]));
-    strokePen.setWidth(strokeSize);
+    strokePen.setWidth(strokeSize * 2);
     strokePen.setCapStyle(Qt::RoundCap);
     painter.setPen(strokePen);
-    painterAreaMask.begin(areaMask);
-    QPen areaPen;
-    areaPen.setColor(QColor(maskColorTable[1]));
-    areaPen.setWidth(strokeSize);
-    areaPen.setCapStyle(Qt::RoundCap);
-    painterAreaMask.setPen(areaPen);
-    painterAreaMask.setPen(QPen(QBrush(QColor(maskColorTable[1])), strokeSize * 5));
 
     QVector<xy>::iterator iter = cursorWay.begin();
     xy lastPos = *iter;
@@ -266,12 +388,31 @@ void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize)
     for(iter++; iter != cursorWay.end(); iter++)
     {
         painter.drawLine(lastPos.x, lastPos.y, iter->x, iter->y);
-        painterAreaMask.drawLine(lastPos.x, lastPos.y, iter->x, iter->y);
         lastPos = *iter;
     }
 
     painter.end();
-    painterAreaMask.end();
+    }
+    // Рисование на картах штрихов
+    uchar* newPixel = newStroke->bits();
+    uchar* strokesPixel = strokeSelection->bits();
+    uchar* strokePixel;
+    if (isForeground)
+        strokePixel = foregroundStroke->bits();
+    else
+        strokePixel = backgroundStroke->bits();
+    uchar stroke = (isForeground) ? strokeForeground : strokeBackground;
+
+    for (int i = 0; i < imageSizeInPixels; i++,
+                                           newPixel++,
+                                           strokesPixel++, strokePixel++)
+    {
+        if (*newPixel)
+        {
+            *strokesPixel = stroke;
+            *strokePixel  = 1;
+        }
+    }
 
     if (imageOutput)
     {
@@ -279,14 +420,25 @@ void ProgressiveCut::createLinesFromXy(QVector<xy> &cursorWay, int strokeSize)
         QMessageBox(QMessageBox::NoIcon, "Отладка", "newStoke").exec();
     }
 
+    /*if (imageOutput)
+    {
+        imageOutput->setPixmap(QPixmap::fromImage(*foregroundStroke));
+        QMessageBox(QMessageBox::NoIcon, "Отладка", "fore").exec();
+    }*/
+
     if (imageOutput)
     {
-        imageOutput->setPixmap(QPixmap::fromImage(*areaMask));
-        QMessageBox(QMessageBox::NoIcon, "Отладка", "areaMask").exec();
+        imageOutput->setPixmap(QPixmap::fromImage(*backgroundStroke));
+        QMessageBox(QMessageBox::NoIcon, "Отладка", "back").exec();
+    }
+
+    if (imageOutput)
+    {
+        imageOutput->setPixmap(QPixmap::fromImage(*strokeSelection));
+        QMessageBox(QMessageBox::NoIcon, "Отладка", "strokes").exec();
     }
 
     delete newStroke;
-    delete areaMask;
 }
 
 QImage *ProgressiveCut::maskGradient(QImage *origin)
@@ -434,6 +586,7 @@ ProgressiveCut::ProgressiveCut()
     foregroundSelection = 0;
     backgroundSelection = 0;
     strokeSelection = 0;
+    strokeSelectionNew = 0;
     foregroundStroke = 0;
     backgroundStroke = 0;
 
@@ -463,6 +616,7 @@ ProgressiveCut::ProgressiveCut(const QImage &imageToCut)
     foregroundSelection = 0;
     backgroundSelection = 0;
     strokeSelection = 0;
+    strokeSelectionNew = 0;
     foregroundStroke = 0;
     backgroundStroke = 0;
 
@@ -503,6 +657,8 @@ ProgressiveCut::~ProgressiveCut()
         delete foregroundStroke;
     if (backgroundStroke)
         delete backgroundStroke;
+    if (strokeSelectionNew)
+        delete strokeSelectionNew;
 
     if (components)
         delete components;
@@ -514,6 +670,8 @@ ProgressiveCut::~ProgressiveCut()
 
     if (selection)
         delete selection;
+
+    lastWeights.clear();
 }
 
 void ProgressiveCut::setImage(const QImage &imageToCut)
@@ -590,6 +748,10 @@ bool ProgressiveCut::updateForeground(const QImage &foreground)
 
     QImage foregroundMask(foreground.convertToFormat(QImage::Format_Indexed8, maskColorTable));
 
+    if (strokeSelectionNew)
+        delete strokeSelectionNew;
+    strokeSelectionNew = new QImage(foregroundMask.copy());
+
     uchar* foregroundPixel = foregroundMask.bits();
     uchar* strokePixel = foregroundStroke->bits();
     uchar* strokesPixel = strokeSelection->bits();
@@ -624,6 +786,10 @@ bool ProgressiveCut::updateBackground(const QImage &background)
         return false;
 
     QImage backgroundMask(background.convertToFormat(QImage::Format_Indexed8, maskColorTable));
+
+    if (strokeSelectionNew)
+        delete strokeSelectionNew;
+    strokeSelectionNew = new QImage(backgroundMask.copy());
 
     uchar* backgroundPixel = backgroundMask.bits();
     uchar* strokePixel = backgroundStroke->bits();

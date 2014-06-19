@@ -14,6 +14,12 @@
 
 enum strokeType { noStroke, strokeForeground, strokeBackground };
 
+struct Weight
+{
+    float toSource, toSink;         // toFore, toBack
+    float BL, BB, BR, RR;           // Вниз-влево, вниз, вниз-вправо, вправо
+};
+
 class ProgressiveCut
 {
 private:
@@ -35,12 +41,14 @@ private:
     int imageWidth, imageHeight, imageSizeInPixels;
     float infinity;
 
+    QVector<Weight> lastWeights;
+
     void initColorTables();
 
     // Две маски вливаются в одну
     int createStrokeMask();
 
-    void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize);
+    void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize, bool isForeground);
     QImage* maskGradient(QImage *origin);
 
     //GMM
@@ -67,7 +75,7 @@ public:
 
     void deleteUpdation();
 
-    void connectNodes();
+    void connectNodes(bool update = false, bool foreground = false);
 
     bool createGraph();
     bool updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize);
@@ -96,7 +104,5 @@ protected:
     float
     Bpq(const QRgb a, const int xa, const int ya, const QRgb b, const int xb, const int yb);
 };
-
-
 
 #endif // PROGRESSIVECUT_H
