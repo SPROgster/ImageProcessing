@@ -48,9 +48,6 @@ private:
     // Две маски вливаются в одну
     int createStrokeMask();
 
-    void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize, bool isForeground);
-    QImage* maskGradient(QImage *origin);
-
     /// Вычисление "энергии интереса"
     // Измерение границ объектов
     xy* getObjectArea(QImage &object);
@@ -86,7 +83,7 @@ public:
     void connectNodes(bool update = false, bool foreground = false);
 
     bool createGraph();
-    bool updateGraph(QVector<xy> &cursorWay, bool foreground, int strokeSize);
+    bool updateGraph(bool foreground);
 
     void setImageOutput(QLabel* imageView);
 

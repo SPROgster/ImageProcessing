@@ -127,15 +127,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 maskingDrawing = true;
                 maskIsEmpty = false;
 
-                if (graphCreated)
-                {
-                    cursorWay.clear();
-                    xy pos;
-                    pos.x = x + 1;
-                    pos.y = y + 1;
-                    cursorWay << pos;
-                }
-
                 QPainter painterAlpha(selectionAlpha);
                 painterAlpha.save();
                 painterAlpha.drawImage(x, y, *maskImageAlpha);
@@ -151,14 +142,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             else if(event->type() == QEvent::MouseMove && maskingDrawing)
             {
                 maskIsEmpty = false;
-
-                if (graphCreated)
-                {
-                    xy pos;
-                    pos.x = x + 1;
-                    pos.y = y + 1;
-                    cursorWay << pos;
-                }
 
                 QPainter painterAlpha(selectionAlpha);
                 painterAlpha.save();
@@ -178,12 +161,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
                 if (graphCreated)
                 {
-                    //progressiveCut->setImageOutput(ui->imageView);
-                    xy pos;
-                    pos.x = x + 1;
-                    pos.y = y + 1;
-                    cursorWay << pos;
-
                     ui->maskButton->setChecked(false);
                     ui->maskButton->setEnabled(false);
                     maskButtonClicked(false);
@@ -228,8 +205,7 @@ void MainWindow::buttonForegroundClicked()
 
         ui->maskButton->setEnabled(false);
 
-        progressiveCut->updateGraph(cursorWay, true, maskValue);
-        cursorWay.clear();
+        progressiveCut->updateGraph(true);
 
         delete image;
         image = new QImage(*progressiveCut->selection);
@@ -257,8 +233,7 @@ void MainWindow::buttonBackgroundClicked()
         ui->maskButton->setEnabled(false);
 
         progressiveCut->setImageOutput(ui->imageView);
-        progressiveCut->updateGraph(cursorWay, false, maskValue);
-        cursorWay.clear();
+        progressiveCut->updateGraph(false);
 
         delete image;
         image = new QImage(*progressiveCut->selection);

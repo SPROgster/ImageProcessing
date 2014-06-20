@@ -72,9 +72,6 @@ private:
     QCursor* maskCursor;
 
     QImage* maskedImage;
-
-    QVector<xy> cursorWay;
-
     //Выделение
 private:
     void selectionMerging();
