@@ -135,13 +135,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                     pos.y = y + 1;
                     cursorWay << pos;
                 }
-                else
-                {
-                    QPainter painterAlpha(selectionAlpha);
-                    painterAlpha.save();
-                    painterAlpha.drawImage(x, y, *maskImageAlpha);
-                    painterAlpha.restore();;
-                }
+
+                QPainter painterAlpha(selectionAlpha);
+                painterAlpha.save();
+                painterAlpha.drawImage(x, y, *maskImageAlpha);
+                painterAlpha.restore();
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
@@ -161,13 +159,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                     pos.y = y + 1;
                     cursorWay << pos;
                 }
-                else
-                {
-                    QPainter painterAlpha(selectionAlpha);
-                    painterAlpha.save();
-                    painterAlpha.drawImage(x, y, *maskImageAlpha);
-                    painterAlpha.restore();
-                }
+
+                QPainter painterAlpha(selectionAlpha);
+                painterAlpha.save();
+                painterAlpha.drawImage(x, y, *maskImageAlpha);
+                painterAlpha.restore();
 
                 QPainter painterUi(maskedImage);
                 painterUi.save();
@@ -225,21 +221,19 @@ void MainWindow::buttonForegroundClicked()
 {
     if (graphCreated)
     {
+        progressiveCut->setImageOutput(ui->imageView);
         segmentForegroundNew = progressiveCut->updateForeground(*selectionAlpha);
 
         maskCancelButtonClicked();
 
         ui->maskButton->setEnabled(false);
 
-        if (cursorWay.size() > 0)
-        {
-            progressiveCut->updateGraph(cursorWay, true, maskValue);
-            cursorWay.clear();
+        progressiveCut->updateGraph(cursorWay, true, maskValue);
+        cursorWay.clear();
 
-            delete image;
-            image = new QImage(*progressiveCut->selection);
-            ui->imageView->setPixmap(QPixmap::fromImage(*image));
-        }
+        delete image;
+        image = new QImage(*progressiveCut->selection);
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
         ui->maskButton->setEnabled(true);
     }
@@ -255,22 +249,20 @@ void MainWindow::buttonBackgroundClicked()
 {
     if (graphCreated)
     {
+        progressiveCut->setImageOutput(ui->imageView);
         segmentBackgroundNew = progressiveCut->updateBackground(*selectionAlpha);
 
         maskCancelButtonClicked();
 
         ui->maskButton->setEnabled(false);
 
-        if (cursorWay.size() > 0)
-        {
-            progressiveCut->setImageOutput(ui->imageView);
-            progressiveCut->updateGraph(cursorWay, false, maskValue);
-            cursorWay.clear();
+        progressiveCut->setImageOutput(ui->imageView);
+        progressiveCut->updateGraph(cursorWay, false, maskValue);
+        cursorWay.clear();
 
-            delete image;
-            image = new QImage(*progressiveCut->selection);
-            ui->imageView->setPixmap(QPixmap::fromImage(*image));
-        }
+        delete image;
+        image = new QImage(*progressiveCut->selection);
+        ui->imageView->setPixmap(QPixmap::fromImage(*image));
 
         ui->maskButton->setEnabled(true);
     }
@@ -433,6 +425,7 @@ void MainWindow::maskCancelButtonClicked()
 {
     ui->maskCancel->setEnabled(false);
     ui->maskMergeButton->setEnabled(false);
+    ui->maskButton->setEnabled(true);
 
     delete selection;
     delete selectionAlpha;

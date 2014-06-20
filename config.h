@@ -14,5 +14,6 @@ struct xy
 
 #define GMM_K 5
 #define MinDet 1e-6
+#define progressiveCutR 0.3
 
 #endif // CONFIG_H

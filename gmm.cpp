@@ -56,6 +56,9 @@ float GMM::p(QRgb x)
         prob += p(i, x_);
     }
 
+    if (prob < 1e-40)
+        prob = 1e-40;
+
     return prob;
 }
 

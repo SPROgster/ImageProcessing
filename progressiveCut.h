@@ -51,6 +51,14 @@ private:
     void createLinesFromXy(QVector<xy> &cursorWay, int strokeSize, bool isForeground);
     QImage* maskGradient(QImage *origin);
 
+    /// Вычисление "энергии интереса"
+    // Измерение границ объектов
+    xy* getObjectArea(QImage &object);
+    float* getDistanseFromStroke(QImage &object);
+    void distanceDebug();
+    float* getInterestsEnergy(bool isForeground);
+    void debugIntesets(float* interestsEnergy);
+
     //GMM
     GMM* gmmBackground;
     GMM* gmmForeground;
