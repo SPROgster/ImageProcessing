@@ -61,7 +61,7 @@
            <x>0</x>
            <y>0</y>
            <width>556</width>
-           <height>422</height>
+           <height>417</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
@@ -128,10 +128,16 @@
         </item>
         <item>
          <widget class="QPushButton" name="buttonFore">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
-            <width>50</width>
-            <height>16777215</height>
+            <width>16777215</width>
+            <height>30</height>
            </size>
           </property>
           <property name="text">
@@ -144,9 +150,15 @@
         </item>
         <item>
          <widget class="QPushButton" name="buttonBack">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="maximumSize">
            <size>
-            <width>50</width>
+            <width>16777215</width>
             <height>16777215</height>
            </size>
           </property>
@@ -168,12 +180,19 @@
           </property>
           <property name="maximumSize">
            <size>
-            <width>43</width>
-            <height>25</height>
+            <width>16777215</width>
+            <height>16777215</height>
            </size>
           </property>
           <property name="text">
            <string>Слить</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="buttonGraph">
+          <property name="text">
+           <string>Сегментировать</string>
           </property>
          </widget>
         </item>
@@ -187,8 +206,8 @@
           </property>
           <property name="maximumSize">
            <size>
-            <width>50</width>
-            <height>25</height>
+            <width>16777215</width>
+            <height>16777215</height>
            </size>
           </property>
           <property name="text">
@@ -218,7 +237,7 @@
            <number>1</number>
           </property>
           <property name="value">
-           <number>15</number>
+           <number>5</number>
           </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -247,14 +266,7 @@
            <number>1</number>
           </property>
           <property name="value">
-           <number>15</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="buttonGraph">
-          <property name="text">
-           <string>Сегментировать</string>
+           <number>5</number>
           </property>
          </widget>
         </item>

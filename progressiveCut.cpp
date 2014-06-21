@@ -82,12 +82,12 @@ void ProgressiveCut::connectNodes(bool update, bool foreground)
         {
             float back, fore;
 
-            if (*backPixel)
+            if (*backPixel || ((*prevPixel) && *interest == 0))
             {
                 back = infinity;
                 fore = 0;
             }
-            else if (*forePixel)
+            else if (*forePixel || (!(*prevPixel) && *interest == 0))
             {
                 back = 0;
                 fore = infinity;

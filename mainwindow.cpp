@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent) :
     masking = false;
     maskIsEmpty = true;
 
-    maskValue = 15;
+    maskValue = 5;
 
     maskCursor = 0;
     maskImage = 0;
@@ -217,6 +217,9 @@ void MainWindow::buttonForegroundClicked()
     {
         segmentForegroundNew = progressiveCut->setForeground(*selectionAlpha);
 
+        ui->buttonGraph->setEnabled(true);
+        ui->maskButton->setChecked(false);
+
         maskCancelButtonClicked();
     }
 }
@@ -244,6 +247,8 @@ void MainWindow::buttonBackgroundClicked()
     else
     {
         segmentBackgroundNew = progressiveCut->setBackground(*selectionAlpha);
+        ui->buttonGraph->setEnabled(true);
+        ui->maskButton->setChecked(false);
 
         maskCancelButtonClicked();
     }
@@ -328,6 +333,12 @@ void MainWindow::maskButtonClicked(bool checked)
             selectionAlpha->fill(Qt::black);
 
             maskedImage = new QImage(*image);
+        }
+
+        if (!graphCreated)
+        {
+            ui->buttonFore->setEnabled(true);
+            ui->buttonBack->setEnabled(true);
         }
 
         // Progressive cut
