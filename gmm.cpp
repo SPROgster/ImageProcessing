@@ -4,7 +4,7 @@
 #include <QProgressDialog>
 #include <cmath>
 
-#include "Eigen/Eigenvalues"
+#include "Eigen/Eigen/Eigenvalues"
 
 GMM::GMM(int k)
 {
